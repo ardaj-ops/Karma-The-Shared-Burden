@@ -62,7 +62,7 @@ namespace RoguelikeCardGame.Hubs
                 {
                     player.InitializeGame(); // Nastaví i plné HP
                     player.DrawCards(5);
-                    await Clients.Client(player.ConnectionId).SendAsync("ReceiveInitialState", player.Hand, player.Mana);
+                    await Clients.Client(player.ConnectionId).SendAsync("ReceiveInitialState", player.Hand, player.Mana, CardDatabase.Cards);
                 }
 
                 // Posíláme celou strukturu mapy všem hráčům
