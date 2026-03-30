@@ -82,7 +82,7 @@ namespace RoguelikeCardGame.Models
         }
 
         // Metoda pro posun do další místnosti
-        public MapNode GetCurrentNode()
+        public MapNode? GetCurrentNode()
         {
             return Map.FirstOrDefault(n => n.Id == CurrentNodeId);
         }

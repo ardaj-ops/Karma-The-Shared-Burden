@@ -21,17 +21,15 @@ namespace RoguelikeCardGame.Hubs
             var newPlayer = new Player(Context.ConnectionId, playerName);
             newPlayer.HeroClass = heroClass;
 
-            // --- NOVÉ: NAČTENÍ DAT Z DATABÁZE HRDINŮ ---
-            // Zkusíme najít hrdinu ve tvém slovníku "Heroes"
-            // POZNÁMKA: Místo "HeroDatabase" použij název třídy, kde máš svůj slovník definovaný!
-            if (HeroDatabase.Heroes.TryGetValue(heroClass, out HeroTemplate template))
+            // --- OPRAVA CHYB: Používáme správné názvy MaxHp a StartingDeck ---
+            if (HeroDatabase.Heroes.TryGetValue(heroClass, out var template))
             {
-                newPlayer.MaxHp = template.Hp;
-                newPlayer.StartingDeck = new List<string>(template.StartingCards); 
+                newPlayer.MaxHp = template.MaxHp;
+                newPlayer.StartingDeck = new List<string>(template.StartingDeck); 
             }
             else
             {
-                // Nouzová pojistka, kdyby někdo zkusil hacknout hru a poslal špatné jméno
+                // Nouzová pojistka
                 newPlayer.MaxHp = 50;
                 newPlayer.StartingDeck = new List<string> { "Card_01", "Card_02", "Card_04" };
             }
@@ -45,13 +43,14 @@ namespace RoguelikeCardGame.Hubs
             {
                 _gameCounter++;
                 string roomName = "GameRoom_" + _gameCounter;
-                var newGame = new GameRoom(roomName); // Tady se automaticky volá GenerateMap()
+                var newGame = new GameRoom(roomName); 
                 
                 _activeRooms.TryAdd(roomName, newGame);
 
+                // OPRAVA VAROVÁNÍ: Kontrola na null hodnoty
                 while (!_waitingRoom.IsEmpty && newGame.Players.Count < PlayersNeededToStart)
                 {
-                    if (_waitingRoom.TryTake(out Player p))
+                    if (_waitingRoom.TryTake(out Player? p) && p != null)
                     {
                         newGame.Players.Add(p);
                         await Groups.AddToGroupAsync(p.ConnectionId, roomName);
@@ -61,7 +60,7 @@ namespace RoguelikeCardGame.Hubs
                 // INICIALIZACE DECKŮ PŘI STARTU HRY
                 foreach (var player in newGame.Players)
                 {
-                    player.InitializeGame(); // Tohle díky naší minulé úpravě nastaví i plné HP!
+                    player.InitializeGame(); // Nastaví i plné HP
                     player.DrawCards(5);
                     await Clients.Client(player.ConnectionId).SendAsync("ReceiveInitialState", player.Hand, player.Mana);
                 }
@@ -69,22 +68,25 @@ namespace RoguelikeCardGame.Hubs
                 // Posíláme celou strukturu mapy všem hráčům
                 await Clients.Group(roomName).SendAsync("GameStarted", roomName, newGame.Map);
                 
-                // Hráči začínají v prvním uzlu (Encounter)
-                var startNode = newGame.Map[0];
-                await Clients.Group(roomName).SendAsync("EnteredNode", startNode.Type.ToString(), startNode);
+                // Hráči začínají v prvním uzlu
+                var startNode = newGame.Map.FirstOrDefault();
+                if (startNode != null)
+                {
+                    await Clients.Group(roomName).SendAsync("EnteredNode", startNode.Type.ToString(), startNode);
+                }
             }
         }
 
         // --- POHYB PO MAPĚ ---
         public async Task MoveToNextNode(string roomName, int nodeId)
         {
-            if (_activeRooms.TryGetValue(roomName, out GameRoom room))
+            if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
             {
                 var currentNode = room.Map.FirstOrDefault(n => n.Id == room.CurrentNodeId);
                 var nextNode = room.Map.FirstOrDefault(n => n.Id == nodeId);
 
-                // Kontrola, zda je uzel propojený a existuje
-                if (nextNode != null && currentNode.ConnectedTo.Contains(nodeId))
+                // OPRAVA VAROVÁNÍ: Přidáno ověření existence uzlů
+                if (currentNode != null && nextNode != null && currentNode.ConnectedTo.Contains(nodeId))
                 {
                     room.CurrentNodeId = nodeId;
                     await Clients.Group(roomName).SendAsync("EnteredNode", nextNode.Type.ToString(), nextNode);
@@ -102,7 +104,7 @@ namespace RoguelikeCardGame.Hubs
 
         public async Task SelectCard(string roomName, string playerName, string cardId, int karmaShift, int damage)
         {
-            if (_activeRooms.TryGetValue(roomName, out GameRoom room))
+            if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
             {
                 var player = room.Players.FirstOrDefault(p => p.Name == playerName);
                 if (player != null && player.Hand.Contains(cardId))
@@ -137,17 +139,19 @@ namespace RoguelikeCardGame.Hubs
                     
                     if (room.EnemyHp <= 0)
                     {
-                        // Místo konce celé hry nyní uzel označíme za splněný a nabídneme mapu
                         var currentNode = room.Map.FirstOrDefault(n => n.Id == room.CurrentNodeId);
-                        if (currentNode != null) currentNode.IsCompleted = true;
-
-                        await Clients.Group(roomName).SendAsync("BattleWon", "Nepřítel poražen! Vyberte další cestu na mapě.");
                         
-                        // Pokud to byl finální Boss, pak teprve konec hry
-                        if (currentNode.Type == NodeType.Boss)
+                        // OPRAVA VAROVÁNÍ: Zajištění, že currentNode není null
+                        if (currentNode != null)
                         {
-                            await Clients.Group(roomName).SendAsync("GameOver", "Vítězství! Celá kampaň dokončena.");
-                            _activeRooms.TryRemove(roomName, out _);
+                            currentNode.IsCompleted = true;
+                            await Clients.Group(roomName).SendAsync("BattleWon", "Nepřítel poražen! Vyberte další cestu na mapě.");
+                            
+                            if (currentNode.Type == NodeType.Boss)
+                            {
+                                await Clients.Group(roomName).SendAsync("GameOver", "Vítězství! Celá kampaň dokončena.");
+                                _activeRooms.TryRemove(roomName, out _);
+                            }
                         }
                     }
                     else
