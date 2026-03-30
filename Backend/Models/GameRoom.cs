@@ -28,12 +28,13 @@ namespace RoguelikeCardGame.Models
         public List<int> ConnectedTo { get; set; } = new List<int>(); 
     }
 
-    public class CardPlayData
-    {
-        public string CardId { get; set; }
-        public int KarmaShift { get; set; }
-        public int Damage { get; set; }
-    }
+   public class CardPlayData
+{
+    // Přidali jsme = string.Empty;
+    public string CardId { get; set; } = string.Empty;
+    public int KarmaShift { get; set; }
+    public int Damage { get; set; }
+}
 
     public class GameRoom
     {

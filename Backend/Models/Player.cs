@@ -9,7 +9,7 @@ namespace RoguelikeCardGame.Models
         public string Name { get; set; }
         
         // --- NOVÉ: HRDINA A ŽIVOTY ---
-        public string HeroClass { get; set; } // Zde se uloží jméno třídy (např. "Paladin", "Mage")
+public string HeroClass { get; set; } = string.Empty;
         public int Hp { get; set; }           // Aktuální životy
         public int MaxHp { get; set; }        // Maximální životy (načtené z HeroTemplate)
 
