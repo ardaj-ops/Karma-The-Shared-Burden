@@ -1,7 +1,7 @@
+// Uprav tuto adresu podle toho, co ti vygeneroval Render!
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("http://localhost:5000/gamehub") 
+    .withUrl("https://karma-backend-xy12.onrender.com/gamehub") 
     .build();
-
 const playerName = "Hráč " + Math.floor(Math.random() * 1000);
 let currentRoomName = ""; 
 let hasPlayedThisTurn = false;
