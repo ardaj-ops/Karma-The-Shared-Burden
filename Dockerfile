@@ -1,5 +1,5 @@
 # 1. Fáze: Sestavení (Build)
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 # Zkopírujeme projekt a stáhneme závislosti
 COPY ["Backend/Backend.csproj", "Backend/"]
@@ -9,7 +9,7 @@ COPY Backend/. Backend/
 RUN dotnet publish "Backend/Backend.csproj" -c Release -o /app/publish
 
 # 2. Fáze: Spuštění
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
 # Nastavíme port, který Render vyžaduje
