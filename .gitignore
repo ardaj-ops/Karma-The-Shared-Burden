@@ -1,0 +1,6 @@
+# Ignorovat složky po buildu C#
+[Bb]in/
+[Oo]bj/
+# Ignorovat skryté složky vývojového prostředí
+.vs/
+.vscode/
