@@ -5,7 +5,7 @@ namespace RoguelikeCardGame.Models
     public static class CardDatabase
     {
         // 1. DATABÁZE VŠECH KARET VE HŘE
-        public static Dictionary<string, Card> AllCards = new Dictionary<string, Card>
+        public static Dictionary<string, CardTemplate> Cards = new Dictionary<string, CardTemplate>
         {
             // --- ZÁKLADNÍ KARTY (Startovní pro většinu) ---
             { "Z_Uder", new Card("Z_Uder", "Základní úder", "Udělí 5 zranění.", 5, 0, 0, -1) },
