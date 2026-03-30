@@ -1,6 +1,5 @@
 const connection = new signalR.HubConnectionBuilder()
-    // Pokud máš server na lokále, nech to takto, jinak tam vrať onrender adresu
-    .withUrl("http://localhost:5000/gamehub") 
+    .withUrl("https://karma-the-shared-burden.onrender.com/gamehub") 
     .build();
 
 const playerName = "Hráč " + Math.floor(Math.random() * 1000);
