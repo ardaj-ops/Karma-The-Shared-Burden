@@ -543,16 +543,6 @@ namespace RoguelikeCardGame.Models
                     "Berserker", "Krvavý berserk", 85, 
                     "Zuřivost: Čím méně máš životů, tím větší zranění udělují tvé základní útoky.",
                     new Relic("R_Sekera", "Zrezivělá sekera", "Pokud máš pod 50% HP, všechny tvé útoky zraňují za +3."),
-                    new List<string> { "Z_Uder", "Z_Uder", "Z_Uder", "Z_Uder", "Z_Uder", "Z_Uder", "Z_Obrana", "Z_Obrana", "H4_Zurit", "H4_Rana" }, 
-                    new List<string> { "H4_Zurit", "H4_Rana" }
-                ) 
-            },
-            { 
-                "Berserker", 
-                new HeroTemplate(
-                    "Berserker", "Krvavý berserk", 85, 
-                    "Zuřivost: Čím méně máš životů, tím větší zranění udělují tvé základní útoky.",
-                    new Relic("R_Sekera", "Zrezivělá sekera", "Pokud máš pod 50% HP, všechny tvé útoky zraňují za +3."),
                     
                     // ZMĚNĚNO: Startovní balíček (Téměř čistý útok a troška sebevražedného adrenalinu)
                     new List<string> { "B_01", "B_01", "B_01", "B_01", "B_02", "B_03", "B_29", "B_29", "B_26", "B_06" }, 

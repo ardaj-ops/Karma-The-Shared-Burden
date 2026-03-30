@@ -7,6 +7,11 @@ namespace RoguelikeCardGame.Models
     {
         public string ConnectionId { get; set; } 
         public string Name { get; set; }
+        
+        // --- NOVÉ: HRDINA A ŽIVOTY ---
+        public string HeroClass { get; set; } // Zde se uloží jméno třídy (např. "Paladin", "Mage")
+        public int Hp { get; set; }           // Aktuální životy
+        public int MaxHp { get; set; }        // Maximální životy (načtené z HeroTemplate)
 
         // --- MANA SYSTÉM ---
         // Vlastnosti (Properties) pro sledování aktuální a maximální many
@@ -29,13 +34,16 @@ namespace RoguelikeCardGame.Models
 
         // --- FUNKCE PRO HRU ---
 
-        // 1. Připraví hru: nakopíruje balíček, vyčistí ruku, nastaví manu a zamíchá
+        // 1. Připraví hru: nakopíruje balíček, vyčistí ruku, nastaví manu, životy a zamíchá
         public void InitializeGame()
         {
             DrawPile = new List<string>(StartingDeck); // Vytvoří kopii startovního balíčku
             Hand.Clear();
             DiscardPile.Clear();
+            
             Mana = MaxMana; 
+            Hp = MaxHp; // NOVÉ: Na startu hry má hráč vždy plné životy
+            
             ShuffleDeck();
         }
 
