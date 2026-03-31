@@ -1,14 +1,15 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RoguelikeCardGame.Models
 {
     public static class EnemyDatabase
     {
-        // Jako klíč budeme používat jméno nepřítele, aby se nám s ním snadno pracovalo
-        public static Dictionary<string, EnemyTemplate> Enemies = new Dictionary<string, EnemyTemplate>
+        public static List<EnemyTemplate> Enemies = new List<EnemyTemplate>
         {
             // ==========================================
-            // ACT 1 - NORMÁLNÍ NEPŘÁTELÉ (10x)
+            // ACT 1 - NORMÁLNÍ (10), ELITY (5), BOSSOVÉ (3)
             // ==========================================
             new EnemyTemplate("1_N_01", "Kultista Temnoty", 60, "Normal", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Dýka ve tmě", DamageToAll = 5 }, new EnemyAction { Name = "Temný rituál", DamageToAll = 2, Heal = 10 },
@@ -38,14 +39,14 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Přelud", Heal = 15 }, new EnemyAction { Name = "Drtivá rána", DamageToAll = 7 },
                 new EnemyAction { Name = "Zlodějský trik", DamageToAll = 6 }, new EnemyAction { Name = "Úsměv smrti", DamageToAll = 9 }
             }),
-            new EnemyTemplate("1_N_05", "Kyselý Sliz", 80, "Normal", 1, new List<EnemyAction> { // Sliz má víc HP, ale dává menší rány
+            new EnemyTemplate("1_N_05", "Kyselý Sliz", 80, "Normal", 1, new List<EnemyAction> { 
                 new EnemyAction { Name = "Žíravina", DamageToAll = 3 }, new EnemyAction { Name = "Pohlcení", DamageToAll = 2, Heal = 5 },
                 new EnemyAction { Name = "Rozdělení", Heal = 15 }, new EnemyAction { Name = "Kyselý plivanec", DamageToAll = 4 },
                 new EnemyAction { Name = "Rozleknutí", DamageToAll = 5 }, new EnemyAction { Name = "Toxický opar", DamageToAll = 3 },
                 new EnemyAction { Name = "Regenerace", Heal = 10 }, new EnemyAction { Name = "Natažení", DamageToAll = 6 },
                 new EnemyAction { Name = "Oblepení", DamageToAll = 2 }, new EnemyAction { Name = "Kyselý výbuch", DamageToAll = 8 }
             }),
-            new EnemyTemplate("1_N_06", "Gobliní Zvěd", 40, "Normal", 1, new List<EnemyAction> { // Málo HP, ale otravný
+            new EnemyTemplate("1_N_06", "Gobliní Zvěd", 40, "Normal", 1, new List<EnemyAction> { 
                 new EnemyAction { Name = "Rychlý bod", DamageToAll = 5 }, new EnemyAction { Name = "Útěk s kořistí", Heal = 10 },
                 new EnemyAction { Name = "Hození dýky", DamageToAll = 7 }, new EnemyAction { Name = "Jedová šipka", DamageToAll = 4 },
                 new EnemyAction { Name = "Kopnutí pod koleno", DamageToAll = 6 }, new EnemyAction { Name = "Panika", DamageToAll = 3, Heal = 5 },
@@ -81,14 +82,11 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Zoufalý útok", DamageToAll = 10 }, new EnemyAction { Name = "Zahojení ran", Heal = 15 }
             }),
 
-            // ==========================================
-            // ACT 1 - ELITNÍ NEPŘÁTELÉ (5x)
-            // ==========================================
             new EnemyTemplate("1_E_01", "Temný Rytíř", 150, "Elite", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Těžký sek", DamageToAll = 12 }, new EnemyAction { Name = "Krvavá žeň", DamageToAll = 8, Heal = 15 },
-                new EnemyAction { Name = "Drtivý dopad", DamageToAll = 15 }, new EnemyAction { Name = "Proražení", DamageToAll = 10 },
+                new EnemyAction { Name = "Drtivý dopad", DamageToAll = 15 }, new EnemyAction { Name = "Proražení štítů", DamageToAll = 10 },
                 new EnemyAction { Name = "Temná aura", DamageToAll = 5, Heal = 10 }, new EnemyAction { Name = "Švihnutí mečem", DamageToAll = 9 },
-                new EnemyAction { Name = "Odplata", DamageToAll = 11 }, new EnemyAction { Name = "Brutální výpad", DamageToAll = 14 },
+                new EnemyAction { Name = "Odplata padlých", DamageToAll = 11 }, new EnemyAction { Name = "Brutální výpad", DamageToAll = 14 },
                 new EnemyAction { Name = "Železná pěst", DamageToAll = 7 }, new EnemyAction { Name = "Vysátí naděje", DamageToAll = 6, Heal = 20 }
             }),
             new EnemyTemplate("1_E_02", "Démonický Inkvizitor", 140, "Elite", 1, new List<EnemyAction> {
@@ -105,7 +103,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Drcení kostí", DamageToAll = 16 }, new EnemyAction { Name = "Hostina", Heal = 35 },
                 new EnemyAction { Name = "Záchvat zuřivosti", DamageToAll = 20 }, new EnemyAction { Name = "Krvavá koupel", DamageToAll = 14 }
             }),
-            new EnemyTemplate("1_E_04", "Kamenný Golem", 200, "Elite", 1, new List<EnemyAction> { // Hodně HP, rány pomalejší ale bolí
+            new EnemyTemplate("1_E_04", "Kamenný Golem", 200, "Elite", 1, new List<EnemyAction> { 
                 new EnemyAction { Name = "Zemětřesení", DamageToAll = 10 }, new EnemyAction { Name = "Vržený balvan", DamageToAll = 18 },
                 new EnemyAction { Name = "Krystalizace", Heal = 20 }, new EnemyAction { Name = "Drcení", DamageToAll = 15 },
                 new EnemyAction { Name = "Tlaková vlna", DamageToAll = 12 }, new EnemyAction { Name = "Nabírání síly", Heal = 30 },
@@ -120,9 +118,6 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Přízračná kosa", DamageToAll = 14 }, new EnemyAction { Name = "Vzkříšení těla", Heal = 40 }
             }),
 
-            // ==========================================
-            // ACT 1 - BOSSOVÉ (3x)
-            // ==========================================
             new EnemyTemplate("1_B_01", "Pán Karmy", 350, "Boss", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Zákon Rovnováhy", DamageToAll = 15, Heal = 15 }, new EnemyAction { Name = "Soudný den", DamageToAll = 25 },
                 new EnemyAction { Name = "Absolutní Očištění", Heal = 50 }, new EnemyAction { Name = "Drtivá tíha osudu", DamageToAll = 20 },
@@ -143,9 +138,9 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Roj malých pavouků", DamageToAll = 22 }, new EnemyAction { Name = "Zákeřný skok", DamageToAll = 24 },
                 new EnemyAction { Name = "Injekce parazita", DamageToAll = 15, Heal = 10 }, new EnemyAction { Name = "Bodnutí žihadlem", DamageToAll = 28 },
                 new EnemyAction { Name = "Zatemnění", DamageToAll = 12 }, new EnemyAction { Name = "Zkáza hnízda", DamageToAll = 32 }
-            })
-        };
-        // ==========================================
+            }),
+
+            // ==========================================
             // ACT 2 - NORMÁLNÍ (10), ELITY (5), BOSSOVÉ (3)
             // ==========================================
             new EnemyTemplate("2_N_01", "Pouštní Štír", 85, "Normal", 2, new List<EnemyAction> {
@@ -275,10 +270,10 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Pád do nicoty", DamageToAll = 55 }, new EnemyAction { Name = "Absolutní temnota", DamageToAll = 35 },
                 new EnemyAction { Name = "Oslňující smrt", DamageToAll = 38 }, new EnemyAction { Name = "Kradení štěstí", Heal = 90 },
                 new EnemyAction { Name = "Vymazání rovnováhy", DamageToAll = 48 }, new EnemyAction { Name = "Konečný soud", DamageToAll = 65 }
-            })
-        };
-        // ==========================================
-            // ACT 3 - NORMÁLNÍ NEPŘÁTELÉ (10x)
+            }),
+
+            // ==========================================
+            // ACT 3 - NORMÁLNÍ (10), ELITY (5), BOSSOVÉ (3)
             // ==========================================
             new EnemyTemplate("3_N_01", "Stín Prázdnoty", 180, "Normal", 3, new List<EnemyAction> {
                 new EnemyAction { Name = "Pohlcení světla", DamageToAll = 15, Heal = 10 }, new EnemyAction { Name = "Absolutní tma", DamageToAll = 22 },
@@ -343,7 +338,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Rozklad atomů", DamageToAll = 35 }, new EnemyAction { Name = "Vdechnutí vakua", Heal = 40 },
                 new EnemyAction { Name = "Šepot prastarých", DamageToAll = 22 }, new EnemyAction { Name = "Extinkce", DamageToAll = 42 }
             }),
-            new EnemyTemplate("3_N_10", "Zvěstovatel Zkázy", 150, "Normal", 3, new List<EnemyAction> { // Málo HP, ale dává absolutní pecky
+            new EnemyTemplate("3_N_10", "Zvěstovatel Zkázy", 150, "Normal", 3, new List<EnemyAction> { 
                 new EnemyAction { Name = "Apokalypsa hned", DamageToAll = 45 }, new EnemyAction { Name = "První polnice", DamageToAll = 35 },
                 new EnemyAction { Name = "Otevírání pečetí", Heal = 30 }, new EnemyAction { Name = "Krvavý déšť", DamageToAll = 38 },
                 new EnemyAction { Name = "Zatěžkávací zkouška", DamageToAll = 28 }, new EnemyAction { Name = "Pád meteoritu", DamageToAll = 50 },
@@ -351,9 +346,6 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Zádušní mše", Heal = 40 }, new EnemyAction { Name = "Konečný akord", DamageToAll = 35 }
             }),
 
-            // ==========================================
-            // ACT 3 - ELITNÍ NEPŘÁTELÉ (5x)
-            // ==========================================
             new EnemyTemplate("3_E_01", "Strážce Rovnováhy", 450, "Elite", 3, new List<EnemyAction> {
                 new EnemyAction { Name = "Kalibrace osudu", DamageToAll = 35 }, new EnemyAction { Name = "Kosmické misky vah", Heal = 60 },
                 new EnemyAction { Name = "Absolutní neutralita", DamageToAll = 45 }, new EnemyAction { Name = "Vykoupení", DamageToAll = 25, Heal = 30 },
@@ -390,9 +382,6 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Slovo moci", DamageToAll = 50 }, new EnemyAction { Name = "Předzvěst", DamageToAll = 42 }
             }),
 
-            // ==========================================
-            // ACT 3 - FINÁLNÍ BOSSOVÉ (3x)
-            // ==========================================
             new EnemyTemplate("3_B_01", "Ztělesnění Karmy", 1200, "Boss", 3, new List<EnemyAction> {
                 new EnemyAction { Name = "Absolutní soud", DamageToAll = 65 }, new EnemyAction { Name = "Vynulování rovnováhy", DamageToAll = 55 },
                 new EnemyAction { Name = "Vysátí veškeré naděje", Heal = 150 }, new EnemyAction { Name = "Zrcadlení hříchů", DamageToAll = 75 },
@@ -415,11 +404,13 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Tříštění mysli", DamageToAll = 80 }, new EnemyAction { Name = "Nekonečný žal", DamageToAll = 95 }
             })
         };
+
         // --- CHYTRÉ FUNKCE PRO VÝBĚR ---
         public static EnemyTemplate GetRandomEnemy(string tier, int act)
         {
             var possibleEnemies = Enemies.Where(e => e.Tier == tier && e.Act == act).ToList();
-            if (possibleEnemies.Count == 0) return Enemies[0]; // Záchranná brzda
+            if (possibleEnemies.Count == 0) return Enemies[0];
+
             Random rng = new Random();
             return possibleEnemies[rng.Next(possibleEnemies.Count)];
         }
