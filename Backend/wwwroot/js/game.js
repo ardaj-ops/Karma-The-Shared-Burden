@@ -16,12 +16,19 @@ let currentEnemiesArray = [];
 let selectedTargetCard = null; 
 let currentMapVotes = {}; 
 
-// --- ULTIMÁTNÍ BEZPEČNÉ ZOBRAZOVÁNÍ ---
+// --- NAČTENÍ JMÉNA Z PAMĚTI PROHLÍŽEČE ---
+document.addEventListener("DOMContentLoaded", () => {
+    const ulozenoJmeno = localStorage.getItem("karmaPlayerName");
+    if (ulozenoJmeno) {
+        document.getElementById("player-name-input").value = ulozenoJmeno;
+    }
+});
+
+// --- BEZPEČNÉ ZOBRAZOVÁNÍ A SKRÝVÁNÍ ---
 function showElement(id, displayType = "block") {
     let el = document.getElementById(id);
     if (el) {
         el.classList.remove("hidden");
-        // Tohle přebije cokoliv, co by bránilo zobrazení
         el.style.setProperty("display", displayType, "important");
     }
 }
@@ -63,22 +70,39 @@ function getCardData(cardId) {
     return { ...base, id: cardId };
 }
 
-// --- LOGOVÁNÍ UDÁLOSTÍ DO HRY ---
 function logMessage(msg) {
     const logEl = document.getElementById("log");
     if (!logEl) return;
     const li = document.createElement("li");
     li.innerText = msg;
     logEl.appendChild(li);
-    logEl.scrollTop = logEl.scrollHeight; // Posune na konec výpisu
+    logEl.scrollTop = logEl.scrollHeight; 
 }
 
 // --- LOBBY A HRA ---
-function pickHero(hero) { playerClass = hero; document.getElementById("selected-hero-text").innerText = hero; }
+function pickHero(hero) { 
+    playerClass = hero; 
+    document.getElementById("selected-hero-text").innerText = hero; 
+    
+    // Zvýraznění vybraného tlačítka
+    document.querySelectorAll(".hero-btn").forEach(btn => {
+        btn.style.boxShadow = "none";
+        btn.style.border = "2px solid transparent";
+        // Najdeme to správné tlačítko podle jeho onclick atributu
+        if (btn.getAttribute("onclick").includes(hero)) {
+            btn.style.boxShadow = "0 0 15px #f1c40f";
+            btn.style.border = "2px solid #f1c40f";
+        }
+    });
+}
+
 function getCredentials() {
     playerName = document.getElementById("player-name-input").value.trim();
     currentRoomName = document.getElementById("room-name-input").value.trim();
-    if (!playerName || !currentRoomName || !playerClass) { alert("Musíš vyplnit všechny údaje!"); return false; }
+    if (!playerName || !currentRoomName || !playerClass) { alert("Musíš vyplnit všechny údaje (Jméno, Místnost i Hrdinu)!"); return false; }
+    
+    // Uložení jména do paměti prohlížeče
+    localStorage.setItem("karmaPlayerName", playerName);
     return true;
 }
 
@@ -96,17 +120,11 @@ connection.on("LobbyUpdate", (players) => {
 connection.on("YouAreHost", () => { showElement("start-game-btn", "inline-block"); hideElement("waiting-text"); });
 
 connection.on("GameStarted", (roomName, initialMap) => {
-    console.log("=========================================");
-    console.log("🔥 GAME STARTED EVENT PŘIJAT!");
-    console.log("Data mapy ze serveru:", initialMap);
-    
     hideElement("waiting-screen");
-    showElement("game-screen"); // Tohle MUSÍ ukázat obrazovku
-    
+    showElement("game-screen"); 
     gameMap = initialMap || []; 
     myCurrentNodeId = -1; currentMapVotes = {};
     logMessage(`🔥 Hra začala! Hlasujte pro startovní políčko.`);
-    
     toggleUI("map"); 
     renderMap();
 });
@@ -328,7 +346,7 @@ function skipReward() {
     connection.invoke("ClaimReward", currentRoomName, playerName, "", relId, relName, relDesc).catch(err => console.error(err));
 }
 
-// --- VYKRESLOVÁNÍ UI ---
+// --- VYKRESLOVÁNÍ UI (MODALY ATD) ---
 function showModalWithCards(title, cardIds) {
     document.getElementById("card-modal-title").innerText = title;
     const container = document.getElementById("card-modal-content"); container.innerHTML = "";
@@ -353,15 +371,23 @@ function renderTeam(teamData) {
     const container = document.getElementById("team-container"); if (!container) return; container.innerHTML = "";
     teamData.forEach(player => {
         const name = safeGet(player, 'name', 'Name');
-        const isMe = name === playerName; const div = document.createElement("div");
+        const isMe = name === playerName; 
+        
+        // Získáme třídu hrdiny (buď ze serveru, pokud ji pošle, nebo použijeme tu naši lokální, pokud jsme to my)
+        const pClass = safeGet(player, 'heroClass', 'HeroClass') || safeGet(player, 'class', 'Class') || (isMe ? playerClass : "Hrdina");
+
+        const div = document.createElement("div");
         div.style.cssText = `background: ${isMe ? "#27ae60" : "#2980b9"}; color: white; padding: 8px 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); text-align: center; min-width: 120px;`;
-        div.innerHTML = `<div style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 5px;">${name}</div>
+        
+        // Zde jsme přidali zobrazení vybrané postavy zlatým písmem!
+        div.innerHTML = `<div style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 5px;">${name} <br><span style="font-size:12px; color:#f1c40f;">(${pClass})</span></div>
             <div style="font-size: 14px;">❤️ ${safeGet(player, 'hp', 'Hp')} / ${safeGet(player, 'maxHp', 'MaxHp')}</div>
             <div style="font-size: 14px;">🛡️ Blok: ${safeGet(player, 'block', 'Block')}</div>`;
         container.appendChild(div);
     });
 }
 
+// --- VYLEPŠENÉ VYKRESLOVÁNÍ NEPŘÁTEL S POPISKY ---
 function renderEnemies(enemiesArray) {
     const container = document.getElementById("enemies-container"); if (!container) return; container.innerHTML = "";
     if (!enemiesArray || enemiesArray.length === 0) return;
@@ -370,10 +396,13 @@ function renderEnemies(enemiesArray) {
         let hp = safeGet(e, 'hp', 'Hp'); if (hp <= 0) return; 
         let id = safeGet(e, 'id', 'Id'); let name = safeGet(e, 'name', 'Name'); let maxHp = safeGet(e, 'maxHp', 'MaxHp');
         let action = safeGet(e, 'currentAction', 'CurrentAction');
-        let actionDesc = action ? safeGet(action, 'intentDescription', 'IntentDescription') : "";
+        let actionDesc = action ? safeGet(action, 'intentDescription', 'IntentDescription') : "Žádná akce";
 
         const div = document.createElement("div");
         div.style.cssText = "background: #c0392b; padding: 10px; border-radius: 5px; color: white; text-align: center; min-width: 160px; transition: all 0.3s ease;";
+        
+        // PŘIDÁNO: Nativní popisek na nepřítele
+        div.title = `Nepřítel: ${name}\nŽivoty: ${hp}/${maxHp}\nZáměr: ${actionDesc}`;
         
         if (selectedTargetCard) {
             div.style.cursor = "crosshair"; div.style.boxShadow = "0 0 20px #e74c3c"; div.style.transform = "scale(1.05)";
@@ -409,12 +438,20 @@ function updateKarmaUI(karma) {
     const statusEl = document.getElementById("karma-status"); if(statusEl) { statusEl.innerText = statusText; statusEl.style.color = statusColor; }
 }
 
+// --- VYLEPŠENÉ VYKRESLOVÁNÍ RUKY S POPISKY ---
 function renderHand() {
     const handContainer = document.getElementById("hand-container"); if (!handContainer) return; handContainer.innerHTML = ""; 
     myHand.forEach(cardId => {
-        const cData = getCardData(cardId); const cardElement = document.createElement("button"); cardElement.className = "card"; 
+        const cData = getCardData(cardId); 
+        const cardElement = document.createElement("button"); 
+        cardElement.className = "card"; 
         let color = "#ecf0f1"; if(cData.karmaShift < 0) color = "#ffcccc"; if(cData.karmaShift > 0) color = "#ccffcc"; 
+        
         cardElement.innerHTML = `<strong>${cData.name}</strong><br><em>${cData.cost} Many</em><br><hr style="margin:5px 0;"><small>${cData.description}</small>`;
+        
+        // PŘIDÁNO: Nativní popisek (tooltip), když hráč najede na kartu myší
+        cardElement.title = `${cData.name}\nCena: ${cData.cost} Many\nEfekt: ${cData.description}`;
+        
         cardElement.onclick = () => { if (selectedTargetCard) { logMessage("Nejprve vyber cíl pro předešlou kartu!"); return; } playCard(cardId, cData.karmaShift, cData.damage); };
         cardElement.style.cssText = `padding: 10px; width: 140px; border: 2px solid #34495e; border-radius: 8px; background: ${color}; cursor: pointer;`;
         handContainer.appendChild(cardElement);
@@ -422,9 +459,6 @@ function renderHand() {
 }
 
 function toggleUI(state) {
-    console.log(`🎛️ Přepínám UI na stav: ${state}`);
-    
-    // Nejprve se ujistíme, že herní obrazovka je stoprocentně vidět
     showElement("game-screen");
 
     ["battle-hud", "hand-wrapper", "map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(hideElement);
@@ -437,48 +471,28 @@ function toggleUI(state) {
     else if (state === "rest") { showElement("rest-screen"); }
 }
 
-// --- SILNĚ VYLEPŠENÁ MAPA (S DETAILNÍM LOGOVÁNÍM) ---
+// --- MAPA ---
 function renderMap() {
-    console.log("🗺️ Funkce renderMap() spuštěna!");
-    
-    const mapContainer = document.getElementById("nodes-list"); 
-    if (!mapContainer) { console.error("❌ CHYBA: Kontejner nodes-list nebyl v HTML nalezen!"); return; }
+    const mapContainer = document.getElementById("nodes-list"); if (!mapContainer) return;
+    mapContainer.innerHTML = ""; mapContainer.style.position = "relative"; mapContainer.style.display = "flex";
+    mapContainer.style.flexDirection = "column-reverse"; mapContainer.style.gap = "50px"; mapContainer.style.padding = "20px";
 
-    mapContainer.innerHTML = ""; 
-    mapContainer.style.position = "relative"; 
-    mapContainer.style.display = "flex";
-    mapContainer.style.flexDirection = "column-reverse"; 
-    mapContainer.style.gap = "50px"; 
-    mapContainer.style.padding = "20px";
-
-    if (!gameMap || gameMap.length === 0) { console.warn("⚠️ gameMap je prázdná!"); return; }
+    if (!gameMap || gameMap.length === 0) return;
 
     let currentNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId);
     let validNextNodeIds = currentNode ? (safeGet(currentNode, 'connectedTo', 'ConnectedTo') || []) : [];
 
-    // Bezpečný výpočet max patra
-    let floorValues = gameMap.map(n => {
-        let f = safeGet(n, 'floor', 'Floor');
-        return (typeof f === "number") ? f : 0;
-    });
+    let floorValues = gameMap.map(n => { let f = safeGet(n, 'floor', 'Floor'); return (typeof f === "number") ? f : 0; });
     const maxFloor = floorValues.length > 0 ? Math.max(...floorValues) : 0;
-    console.log(`⬆️ Max patro je: ${maxFloor}`);
-
-    let vykreslenoUzlu = 0;
 
     for (let f = 0; f <= maxFloor; f++) {
-        const floorNodes = gameMap.filter(n => {
-            let nf = safeGet(n, 'floor', 'Floor');
-            return (typeof nf === "number" ? nf : 0) === f;
-        });
-        
+        const floorNodes = gameMap.filter(n => { let nf = safeGet(n, 'floor', 'Floor'); return (typeof nf === "number" ? nf : 0) === f; });
         if (floorNodes.length === 0) continue;
 
         const row = document.createElement("div");
         row.style.display = "flex"; row.style.justifyContent = "center"; row.style.gap = "80px"; row.style.zIndex = "2"; 
         
         floorNodes.forEach(node => {
-            vykreslenoUzlu++;
             const btnWrapper = document.createElement("div"); btnWrapper.style.position = "relative"; 
             const btn = document.createElement("button"); 
             let nodeId = safeGet(node, 'id', 'Id'); let nodeFloor = safeGet(node, 'floor', 'Floor'); let nodeType = getTypeString(safeGet(node, 'type', 'Type')); let isCompleted = safeGet(node, 'isCompleted', 'IsCompleted');
@@ -527,8 +541,6 @@ function renderMap() {
         });
         mapContainer.appendChild(row);
     }
-    
-    console.log(`✅ Mapování dokončeno. Do HTML bylo vloženo ${vykreslenoUzlu} tlačítek.`);
     setTimeout(() => drawMapLines(mapContainer), 100);
 }
 

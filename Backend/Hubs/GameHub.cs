@@ -25,7 +25,7 @@ namespace RoguelikeCardGame.Hubs
 
         private object GetTeamStats(GameRoom room)
         {
-            return room.Players.Select(p => new { name = p.Name, hp = p.Hp, maxHp = p.MaxHp, block = p.Block }).ToList();
+            return room.Players.Select(p => new { name = p.Name, hp = p.Hp, maxHp = p.MaxHp, block = p.Block, heroClass = p.HeroClass }).ToList();
         }
 
         public override async Task OnDisconnectedAsync(Exception? exception)
@@ -178,15 +178,10 @@ namespace RoguelikeCardGame.Hubs
                 else if (targetNode.Type == NodeType.Shop)
                 {
                     targetNode.IsCompleted = true;
-                    
                     foreach (var p in room.Players)
                     {
-                        // Zavoláme náš nový čistý ShopManager
                         var playerShop = ShopManager.GenerateShopForPlayer(p);
-                        
                         await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, new List<ActiveEnemy>());
-                        
-                        // Pošleme strukturovaná data do Frontendu (názvy vlastností se z C# do JS přeloží s malým písmenem, takže to bude perfektně sedět)
                         await Clients.Client(p.ConnectionId).SendAsync("EnterShop", playerShop.Cards, playerShop.Relics, playerShop.RemoveCost); 
                     }
                 }
@@ -231,7 +226,6 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // --- AKCE V TÁBOŘE (REST PLACE) ---
         public async Task RestPlaceAction(string roomName, string playerName, string actionType, string cardId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
@@ -323,6 +317,7 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
+        // --- ZMĚNA 1: OKAMŽITÉ VYHODNOCENÍ KARTY (REAL-TIME BOJ) ---
         public async Task SelectCard(string roomName, string playerName, string cardId, int karmaShift, int damage, string targetEnemyId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
@@ -332,13 +327,57 @@ namespace RoguelikeCardGame.Hubs
                 {
                     player.Hand.Remove(cardId);
                     player.DiscardPile.Add(cardId);
+                    
+                    room.CurrentKarma += karmaShift;
+                    
+                    string baseCardId = cardId.EndsWith("+") ? cardId.Substring(0, cardId.Length - 1) : cardId;
+                    bool isUpgraded = cardId.EndsWith("+");
+
+                    if (CardDatabase.Cards.TryGetValue(baseCardId, out var fullCard))
+                    {
+                        int block = fullCard.Block + (isUpgraded && fullCard.Block > 0 ? 3 : 0);
+                        int heal = fullCard.Heal + (isUpgraded && fullCard.Heal > 0 ? 2 : 0);
+
+                        player.Block += block;
+                        player.Hp += heal;
+                        if (player.Hp > player.MaxHp) player.Hp = player.MaxHp;
+                    }
+
+                    var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
+                    
+                    if (damage > 0)
+                    {
+                        double damageMultiplier = 1.0;
+                        if (room.CurrentKarma >= 10) damageMultiplier = 0.8;
+                        else if (room.CurrentKarma <= -10) damageMultiplier = 1.3;
+
+                        int actualDamage = (int)Math.Round(damage * damageMultiplier);
+                        
+                        var target = enemies.FirstOrDefault(e => e.Id == targetEnemyId && e.Hp > 0);
+                        if (target == null) target = enemies.FirstOrDefault(e => e.Hp > 0); // fallback na dalšího živého
+
+                        if (target != null)
+                        {
+                            target.Hp -= actualDamage;
+                            if (target.Hp <= 0) target.Hp = 0;
+                            await Clients.Group(roomName).SendAsync("CardPlayedLog", playerName, cardId);
+                        }
+                    }
+                    else
+                    {
+                        await Clients.Group(roomName).SendAsync("CardPlayedLog", playerName, cardId);
+                    }
+
+                    // Odešleme nová data hned všem hráčům
+                    await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                    
+                    var summary = new List<string>();
+                    await Clients.Group(roomName).SendAsync("TurnResolved", summary, damage, room.CurrentKarma, enemies);
                 }
-                var cardData = new CardPlayData { CardId = cardId, KarmaShift = karmaShift, Damage = damage, TargetEnemyId = targetEnemyId };
-                room.PlayedCardsThisTurn.AddOrUpdate(playerName, new List<CardPlayData> { cardData }, (key, existingList) => { existingList.Add(cardData); return existingList; });
-                await Clients.Group(roomName).SendAsync("CardPlayedLog", playerName, cardId);
             }
         }
 
+        // --- ZMĚNA 2: TAH NEPŘÁTEL ZAČÍNÁ AŽ KDYZ JSOU VŠICHNI READY ---
         public async Task PlayerReady(string roomName, string playerName)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
@@ -346,60 +385,14 @@ namespace RoguelikeCardGame.Hubs
                 room.PlayersReady.Add(playerName);
                 await Clients.Group(roomName).SendAsync("PlayerReadyLog", playerName, room.PlayersReady.Count, room.Players.Count);
 
+                // KDYŽ ODklikli VŠICHNI HRÁČI KONEC TAHU:
                 if (room.PlayersReady.Count >= room.Players.Count)
                 {
-                    int totalKarmaShift = 0;
-                    int totalDamageDealt = 0;
                     var summary = new List<string>();
                     var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
-
-                    foreach (var kvp in room.PlayedCardsThisTurn)
-                    {
-                        var player = room.Players.FirstOrDefault(p => p.Name == kvp.Key);
-                        foreach(var card in kvp.Value)
-                        {
-                            totalKarmaShift += card.KarmaShift;
-                            summary.Add($"{kvp.Key} zahrál {card.CardId}");
-
-                            // --- APLIKACE BONUSŮ Z VYLEPŠENÝCH KARET (Ty s + na konci) ---
-                            string baseCardId = card.CardId.EndsWith("+") ? card.CardId.Substring(0, card.CardId.Length - 1) : card.CardId;
-                            bool isUpgraded = card.CardId.EndsWith("+");
-
-                            if (player != null && CardDatabase.Cards.TryGetValue(baseCardId, out var fullCard))
-                            {
-                                int block = fullCard.Block + (isUpgraded && fullCard.Block > 0 ? 3 : 0);
-                                int heal = fullCard.Heal + (isUpgraded && fullCard.Heal > 0 ? 2 : 0);
-
-                                player.Block += block;
-                                player.Hp += heal;
-                                if (player.Hp > player.MaxHp) player.Hp = player.MaxHp;
-                            }
-
-                            if (card.Damage > 0)
-                            {
-                                double damageMultiplier = 1.0;
-                                if (room.CurrentKarma >= 10) damageMultiplier = 0.8;
-                                else if (room.CurrentKarma <= -10) damageMultiplier = 1.3;
-
-                                int actualDamage = (int)Math.Round(card.Damage * damageMultiplier);
-                                
-                                var target = enemies.FirstOrDefault(e => e.Id == card.TargetEnemyId && e.Hp > 0);
-                                if (target == null) target = enemies.FirstOrDefault(e => e.Hp > 0);
-
-                                if (target != null)
-                                {
-                                    target.Hp -= actualDamage;
-                                    totalDamageDealt += actualDamage;
-                                    summary.Add($"⚔️ {kvp.Key} zasáhl {target.Name} za {actualDamage} DMG.");
-                                    if (target.Hp <= 0) { target.Hp = 0; summary.Add($"💀 {target.Name} byl poražen!"); }
-                                }
-                            }
-                        }
-                    }
-
-                    room.CurrentKarma += totalKarmaShift;
                     bool allDead = enemies.Count > 0 && enemies.All(e => e.Hp <= 0);
 
+                    // 1. ÚTOČÍ MONSTRA
                     if (!allDead && enemies.Count > 0)
                     {
                         summary.Add($"--- TAH NEPŘÁTEL ---");
@@ -408,6 +401,7 @@ namespace RoguelikeCardGame.Hubs
                             var action = enemy.CurrentAction;
                             summary.Add($"{enemy.Name} provedl: {action.Name}!");
                             if (action.Heal > 0) { enemy.Hp += action.Heal; if (enemy.Hp > enemy.MaxHp) enemy.Hp = enemy.MaxHp; }
+                            
                             if (action.DamageToAll > 0)
                             {
                                 foreach (var p in room.Players)
@@ -421,23 +415,20 @@ namespace RoguelikeCardGame.Hubs
                         }
                     }
 
-                    room.PlayedCardsThisTurn.Clear();
                     room.PlayersReady.Clear();
-                    
                     await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
-                    await Clients.Group(roomName).SendAsync("TurnResolved", summary, totalDamageDealt, room.CurrentKarma, enemies);
+                    await Clients.Group(roomName).SendAsync("TurnResolved", summary, 0, room.CurrentKarma, enemies);
                     
+                    // 2. VYHODNOCENÍ KONCE BOJE (VÝHRA)
                     if (allDead && enemies.Count > 0)
                     {
                         var currentNode = room.Map.FirstOrDefault(n => n.Id == room.CurrentNodeId);
                         if (currentNode != null)
                         {
                             currentNode.IsCompleted = true;
-                            
                             Random rng = new Random();
                             var allCards = CardDatabase.Cards.Values.ToList();
                             
-                            // ŠKÁLOVÁNÍ ZLAŤÁKŮ PODLE OBTÍŽNOSTI BOJE
                             int goldReward = 0;
                             if (currentNode.Type == NodeType.Encounter) goldReward = rng.Next(15, 31);
                             else if (currentNode.Type == NodeType.EliteEncounter) goldReward = rng.Next(40, 71);
@@ -475,6 +466,7 @@ namespace RoguelikeCardGame.Hubs
                     }
                     else
                     {
+                        // 3. POKUD BOJ POKRAČUJE, ROZDÁME HRÁČŮM NOVÉ KARTY NA DALŠÍ KOLO
                         foreach (var p in room.Players)
                         {
                             p.Mana = p.MaxMana;
