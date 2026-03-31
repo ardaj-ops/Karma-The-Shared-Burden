@@ -146,26 +146,44 @@ connection.on("TurnResolved", (summary, totalDamage, newKarma, enemyHp) => {
     document.getElementById("karma-value").innerText = newKarma;
 });
 
-connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawCount, discardCount) => {
+connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawCount, discardCount, hp, maxHp, block, intentDescription) => {
     myHand = updatedHand;
     myMana = updatedMana;
     myGold = updatedGold || 0;
     myDrawPileCount = drawCount || 0;
     myDiscardPileCount = discardCount || 0;
+    myHp = hp || 0;
+    myMaxHp = maxHp || 0;
+    myBlock = block || 0;
     
     turnEnded = false; 
-    logMessage(`🔄 Začíná tvůj nový tah!`);
+    logMessage(`🔄 Začíná tvůj nový tah! Dobrány karty do 3.`);
     
     document.getElementById("end-turn-btn").disabled = false;
     document.getElementById("end-turn-btn").style.backgroundColor = "#8e44ad";
+    
+    // Zobrazíme novou myšlenku nepřítele pro tohle kolo
+    if(document.getElementById("enemy-intent") && intentDescription) {
+        document.getElementById("enemy-intent").innerText = intentDescription;
+    }
     
     updateStatsUI();
     renderHand(); 
 });
 
-connection.on("EnteredNode", (nodeType, nodeData) => {
+connection.on("EnteredNode", (nodeType, nodeData, enemyName, enemyHp, enemyMaxHp, intentDescription) => {
     logMessage(`📍 Vstupujete do: ${nodeType}`);
+    
     if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") {
+        document.getElementById("enemy-name").innerText = enemyName;
+        document.getElementById("enemy-hp").innerText = enemyHp;
+        document.getElementById("enemy-max-hp").innerText = enemyMaxHp;
+        
+        // Zobrazíme myšlenku nepřítele
+        if(document.getElementById("enemy-intent")) {
+            document.getElementById("enemy-intent").innerText = intentDescription;
+        }
+
         toggleUI("battle");
     } else if (nodeType === "Treasure" || nodeType === "RestPlace") {
         toggleUI("map");

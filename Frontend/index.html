@@ -41,9 +41,20 @@
         </div>
 
         <div id="battle-hud">
-            <div style="background: #e74c3c; padding: 10px; margin: 10px; border-radius: 5px; width: 80%; margin: 10px auto; text-align: center; color: white;">
-                <h2 style="margin: 0;">Nepřítel HP: <span id="enemy-hp">100</span></h2>
-            </div>
+    <div id="enemies-container" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+        </div>
+    
+    <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto;">
+        <div id="karma-bar">Společná Karma: <strong id="karma-value">0</strong> <span id="karma-status"> (Rovnováha ⚖️)</span></div>
+        <div id="mana-bar" style="color: #3498db;">Tvoje Mana: <strong id="mana-value">0</strong> / 3</div>
+        <div id="gold-bar" style="color: #f1c40f;">Zlaťáky: <strong id="gold-value">0</strong> 💰</div>
+    </div>
+
+    <div style="display: flex; justify-content: space-around; background: #27ae60; color: white; padding: 10px; border-radius: 5px; width: 60%; margin: 10px auto;">
+        <div>❤️ Tvé HP: <strong id="hero-hp">0</strong> / <span id="hero-max-hp">0</span></div>
+        <div style="color: #ecf0f1;">🛡️ Tvůj Blok: <strong id="hero-block">0</strong></div>
+    </div>
+</div>
             
             <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto;">
                 <div id="karma-bar">Společná Karma: <span id="karma-value">0</span></div>
