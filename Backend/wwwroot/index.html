@@ -146,18 +146,7 @@
         <button onclick="closeUpgradeModal()" style="margin-top: 30px; padding: 15px 40px; font-size: 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">❌ Zpět k táboráku</button>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const elementsToHide = ["waiting-screen", "game-screen", "map-container", "battle-hud", "shop-screen", "event-screen", "rest-screen", "reward-screen", "hand-wrapper", "card-modal", "upgrade-modal"];
-            elementsToHide.forEach(id => {
-                let el = document.getElementById(id);
-                if(el) {
-                    el.classList.add("hidden");
-                    el.style.display = "none";
-                }
-            });
-        });
-    </script>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script src="js/game.js"></script>

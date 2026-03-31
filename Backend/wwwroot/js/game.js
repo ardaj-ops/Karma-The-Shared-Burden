@@ -455,10 +455,31 @@ function renderHand() {
 }
 
 function toggleUI(state) {
+    // 1. Zjistíme, jestli se hra už vůbec zapnula
+    let gameScreen = document.getElementById("game-screen");
+    if (gameScreen) {
+        if (state === "none") {
+            // Pokud jsme v Lobby, schováme celou herní obrazovku
+            gameScreen.classList.add("hidden");
+            gameScreen.style.display = "none";
+        } else {
+            // Jakmile se zapne jakákoliv část hry, celá herní obrazovka se musí ukázat
+            gameScreen.classList.remove("hidden");
+            gameScreen.style.display = "block";
+        }
+    }
+
+    // 2. Schováme všechny vnitřní panely
     ["battle-hud", "hand-wrapper", "map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(id => {
-        let el = document.getElementById(id); if(el) el.style.display = "none";
+        let el = document.getElementById(id); 
+        if(el) el.style.display = "none";
     });
-    if (state === "battle") { document.getElementById("battle-hud").style.display = "block"; document.getElementById("hand-wrapper").style.display = "block"; } 
+
+    // 3. Ukážeme jen ten panel, který právě potřebujeme
+    if (state === "battle") { 
+        document.getElementById("battle-hud").style.display = "block"; 
+        document.getElementById("hand-wrapper").style.display = "block"; 
+    } 
     else if (state === "map") { document.getElementById("map-container").style.display = "block"; } 
     else if (state === "reward") { document.getElementById("reward-screen").style.display = "block"; } 
     else if (state === "shop") { document.getElementById("shop-screen").style.display = "block"; } 
