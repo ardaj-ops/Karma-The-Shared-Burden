@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Karma: The Shared Burden</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
     <h1 style="text-align: center; color: white; margin-top: 20px;">Karma: The Shared Burden</h1>
@@ -95,7 +98,7 @@
 
         <div id="rest-screen" class="hidden" style="background: #2c3e50; color: white; padding: 30px; border-radius: 5px; margin: 20px auto; width: 60%; text-align: center; border: 2px solid #e67e22; box-shadow: 0 0 20px rgba(230, 126, 34, 0.5);">
             <h2 style="color: #e67e22; margin-top: 0;">⛺ Táborák</h2>
-            <p style="font-size: 18px; margin-bottom: 30px;">Vyber si, zda si chceš odpočinout a nabrat síly, nebo vylepšit kartu. (Každá karta jde vylepšit jen jednou)</p>
+            <p style="font-size: 18px; margin-bottom: 30px;">Vyber si, zda si chceš odpočinout a nabrat síly, nebo vylepšit kartu.</p>
             <div style="display: flex; justify-content: center; gap: 20px;">
                 <button onclick="chooseRestHeal()" style="padding: 15px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer;">❤️ Odpočívat (+30% HP)</button>
                 <button onclick="openUpgradeModal()" style="padding: 15px 30px; font-size: 18px; background: #d35400; color: white; border: none; border-radius: 5px; cursor: pointer;">🔨 Vylepšit kartu</button>
@@ -143,13 +146,11 @@
     </div>
 
     <script>
-        // Skryje všechny podokna hned při načtení
         document.addEventListener("DOMContentLoaded", () => {
             const elementsToHide = ["waiting-screen", "game-screen", "map-container", "battle-hud", "shop-screen", "event-screen", "rest-screen", "reward-screen", "hand-wrapper", "card-modal", "upgrade-modal"];
             elementsToHide.forEach(id => {
                 let el = document.getElementById(id);
                 if(el) {
-                    el.classList.add("hidden");
                     el.style.display = "none";
                 }
             });
