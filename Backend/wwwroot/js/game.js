@@ -13,9 +13,9 @@ let myHp = 0; let myMaxHp = 0; let myBlock = 0;
 
 let myCurrentNodeId = -1;
 let currentEnemiesArray = []; 
-let currentTeamData = []; // NOVÉ: Paměť pro aktuální tým kvůli vykreslování cílení
+let currentTeamData = []; 
 let selectedTargetCard = null; 
-let selectedTargetAllyCard = null; // NOVÉ: Karta vyžadující kliknutí na spoluhráče
+let selectedTargetAllyCard = null; 
 let currentMapVotes = {}; 
 
 // --- NAČTENÍ JMÉNA Z PAMĚTI PROHLÍŽEČE ---
@@ -103,8 +103,35 @@ function getCredentials() {
     return true;
 }
 
-function createLobby() { if(!getCredentials()) return; connection.start().then(() => { connection.invoke("CreateLobby", currentRoomName, playerName, playerClass).catch(err => console.error(err)); showWaitingRoom(); }); }
-function joinLobby() { if(!getCredentials()) return; connection.start().then(() => { connection.invoke("JoinLobby", currentRoomName, playerName, playerClass).catch(err => console.error(err)); showWaitingRoom(); }); }
+// --- OPRAVA: BEZPEČNÉ PŘIPOJENÍ (zabraňuje chybě s HubConnection) ---
+async function startConnectionIfNotStarted() {
+    if (connection.state === signalR.HubConnectionState.Disconnected) {
+        await connection.start();
+    }
+}
+
+async function createLobby() { 
+    if(!getCredentials()) return; 
+    try {
+        await startConnectionIfNotStarted();
+        await connection.invoke("CreateLobby", currentRoomName, playerName, playerClass);
+        showWaitingRoom();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function joinLobby() { 
+    if(!getCredentials()) return; 
+    try {
+        await startConnectionIfNotStarted();
+        await connection.invoke("JoinLobby", currentRoomName, playerName, playerClass);
+        showWaitingRoom();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 function startGame() { connection.invoke("StartGame", currentRoomName).catch(err => console.error(err)); }
 
 function showWaitingRoom() { hideElement("lobby-screen"); showElement("waiting-screen"); document.getElementById("display-room-name").innerText = currentRoomName; }
@@ -114,7 +141,7 @@ connection.on("LobbyUpdate", (players) => {
     const list = document.getElementById("lobby-players-list"); list.innerHTML = "";
     players.forEach(p => { 
         const li = document.createElement("li"); 
-        let pName = safeGet(p, 'name', 'Name') || p; // Záchrana pro starší verzi
+        let pName = safeGet(p, 'name', 'Name') || p; 
         let pClass = safeGet(p, 'heroClass', 'HeroClass');
         li.innerHTML = `🧙‍♂️ <strong>${pName}</strong> ${pClass ? `<span style="color: #f1c40f; font-size: 16px;">(${pClass})</span>` : ""}`; 
         list.appendChild(li); 
@@ -142,7 +169,6 @@ connection.on("UpdateRelics", (relicsList) => {
     });
 });
 
-// --- ZMĚNA Ukládáme si lokálně tým, abychom mohli cílit ---
 connection.on("UpdateTeamStats", (teamData) => { currentTeamData = teamData; renderTeam(teamData); });
 connection.on("UpdateMapVotes", (votes) => { currentMapVotes = votes; renderMap(); });
 
@@ -288,7 +314,6 @@ function playCard(cardId, karmaShift, damage) {
     const cardData = getCardData(cardId);
     if (myMana < cardData.cost) { alert("Nemáš dostatek Many!"); return; }
 
-    // Pokud karta udílí zranění, cílíme na Nepřítele
     if (cardData.damage > 0) {
         selectedTargetCard = { id: cardId, karmaShift: karmaShift, damage: cardData.damage, cost: cardData.cost };
         selectedTargetAllyCard = null;
@@ -297,7 +322,6 @@ function playCard(cardId, karmaShift, damage) {
         renderTeam(currentTeamData);
         return;
     } 
-    // Pokud karta jen léčí, cílíme na Spoluhráče v týmu (nebo sebe)
     else if (cardData.heal > 0) {
         selectedTargetAllyCard = { id: cardId, karmaShift: karmaShift, cost: cardData.cost };
         selectedTargetCard = null;
@@ -306,13 +330,11 @@ function playCard(cardId, karmaShift, damage) {
         renderEnemies(currentEnemiesArray);
         return;
     }
-    // Ostatní karty (blokování, lízání) se rovnou zahrají na sebe
     else { 
         executeCardPlay(cardId, karmaShift, 0, cardData.cost, "", ""); 
     }
 }
 
-// ZMĚNA: Přidán parametr targetPlayerName
 function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId, targetPlayerName = "") {
     myMana -= cardCost; 
     const cardIndex = myHand.indexOf(cardId);
@@ -321,7 +343,6 @@ function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId, ta
     const cData = getCardData(cardId);
     myBlock += (cData.block || 0); 
     
-    // Front-end predikce léčení pro sebe (pokud jsi cíl ty, nebo pokud to nebyla cílená léčící karta)
     if (targetPlayerName === playerName || (!targetPlayerName && cData.heal > 0)) {
         myHp += (cData.heal || 0); 
         if(myHp > myMaxHp) myHp = myMaxHp;
@@ -332,7 +353,6 @@ function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId, ta
     
     updateStatsUI(); renderHand(); renderEnemies(currentEnemiesArray); renderTeam(currentTeamData);
     
-    // Odesíláme na server obě ID (nepřítele i hráče). Jedno z nich bude vždy prázdné.
     connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage, targetEnemyId || "", targetPlayerName || "").catch(err => console.error(err));
 }
 
@@ -404,7 +424,6 @@ function showStartingDeck() { showModalWithCards("Tvůj kompletní balíček", m
 function showDrawPile() { showModalWithCards("Karty k líznutí", myDrawPile); }
 function showDiscardPile() { showModalWithCards("Odhozené karty", myDiscardPile); }
 
-// --- ZMĚNA: Přidána možnost kliknout na hráče pro léčení ---
 function renderTeam(teamData) {
     const container = document.getElementById("team-container"); if (!container) return; container.innerHTML = "";
     teamData.forEach(player => {
@@ -415,7 +434,6 @@ function renderTeam(teamData) {
         const div = document.createElement("div");
         div.style.cssText = `background: ${isMe ? "#27ae60" : "#2980b9"}; color: white; padding: 8px 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); text-align: center; min-width: 120px; transition: all 0.3s ease;`;
         
-        // Zpracování cílení na hráče (Léčení)
         if (selectedTargetAllyCard) {
             div.style.cursor = "crosshair"; 
             div.style.boxShadow = "0 0 20px #2ecc71"; 
