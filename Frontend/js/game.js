@@ -464,60 +464,177 @@ function toggleUI(state) {
     }
 }
 
-// --- VYLEPŠENÁ MAPA ---
+// Globální proměnná pro aktuální polohu (pro UI mapy)
+let myCurrentNodeId = -1;
+
+connection.on("GameStarted", (roomName, initialMap) => {
+    document.getElementById("waiting-screen").style.display = "none";
+    document.getElementById("game-screen").style.display = "block";
+    
+    gameMap = initialMap;
+    myCurrentNodeId = -1; // Reset při nové hře
+    logMessage(`🔥 Hra začala! Vyberte si startovní políčko na dně mapy.`);
+    toggleUI("map");
+    renderMap();
+});
+
+connection.on("EnteredNode", (nodeType, nodeData, enemiesArray) => {
+    logMessage(`📍 Vstupujete do: ${nodeType}`);
+    myCurrentNodeId = nodeData.id; // Uložíme aktuální pozici
+    
+    if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") {
+        renderEnemies(enemiesArray);
+        toggleUI("battle");
+    } else {
+        // Shop, RestPlace, Event, Treasure
+        logMessage(`⏳ Návštěva: ${nodeType}. Brzy zde bude UI. Zatím pokračujeme.`);
+        // Označíme lokálně jako completed
+        let mapNode = gameMap.find(n => n.id === nodeData.id);
+        if(mapNode) mapNode.isCompleted = true;
+        
+        toggleUI("map");
+        renderMap();
+    }
+});
+// --- VYLEPŠENÁ MAPA (Stromová struktura s čarami) ---
 function renderMap() {
     const mapContainer = document.getElementById("nodes-list");
     if (!mapContainer) return;
     
     mapContainer.innerHTML = "";
+    mapContainer.style.position = "relative";
+    mapContainer.style.display = "flex";
+    mapContainer.style.flexDirection = "column-reverse"; // Odspodu nahoru
+    mapContainer.style.gap = "40px";
+    mapContainer.style.padding = "20px";
+
+    // 1. Zjistíme, v jakém uzlu stojíme
+    let currentNode = gameMap.find(n => n.id === myCurrentNodeId);
+    let validNextNodeIds = currentNode ? currentNode.connectedTo : [];
+
+    // 2. Seskupíme uzly podle pater (Floors)
+    const maxFloor = Math.max(...gameMap.map(n => n.floor));
     
-    gameMap.forEach((node, index) => {
-        if (index > 0) {
-            const arrow = document.createElement("div");
-            arrow.innerText = "➔";
-            arrow.style.color = "white";
-            arrow.style.fontSize = "24px";
-            arrow.style.alignSelf = "center";
-            mapContainer.appendChild(arrow);
-        }
+    for (let f = 0; f <= maxFloor; f++) {
+        const floorNodes = gameMap.filter(n => n.floor === f);
+        
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.justifyContent = "center";
+        row.style.gap = "60px";
+        row.style.zIndex = "2"; // Nad čarami
+        
+        floorNodes.forEach(node => {
+            const btn = document.createElement("button");
+            btn.id = `node-${node.id}`;
+            
+            let icon = "❓";
+            if (node.type === "Encounter") icon = "⚔️";
+            else if (node.type === "EliteEncounter") icon = "👹";
+            else if (node.type === "Boss") icon = "👑";
+            else if (node.type === "Treasure") icon = "💰";
+            else if (node.type === "RestPlace") icon = "⛺";
+            else if (node.type === "Shop") icon = "🛒";
+            else if (node.type === "Event") icon = "📜";
 
-        const btn = document.createElement("button");
-        
-        let icon = "❓";
-        if (node.type === "Encounter") icon = "⚔️";
-        else if (node.type === "EliteEncounter") icon = "👹";
-        else if (node.type === "Boss") icon = "👑";
-        else if (node.type === "Treasure") icon = "💰";
-        else if (node.type === "RestPlace") icon = "⛺";
+            btn.innerHTML = `<div style="font-size: 24px;">${icon}</div>`;
+            btn.style.padding = "10px";
+            btn.style.borderRadius = "50%";
+            btn.style.border = "3px solid #2c3e50";
+            btn.style.width = "60px";
+            btn.style.height = "60px";
+            btn.style.display = "flex";
+            btn.style.justifyContent = "center";
+            btn.style.alignItems = "center";
+            btn.style.position = "relative";
+            btn.style.transition = "all 0.2s";
+            
+            // Logika povolení kliknutí (Jen aktuálně napojená patra nebo start)
+            let isClickable = false;
+            if (myCurrentNodeId === -1 && node.floor === 0) isClickable = true; // První volba
+            if (validNextNodeIds.includes(node.id) && !node.isCompleted) isClickable = true; // Další krok
 
-        btn.innerHTML = `<div style="font-size: 24px;">${icon}</div><div style="font-size: 12px; margin-top: 5px;">Patro ${node.floor}</div>`;
-        btn.style.padding = "10px";
-        btn.style.borderRadius = "50%";
-        btn.style.border = "3px solid #2c3e50";
-        btn.style.color = "white";
-        btn.style.width = "80px";
-        btn.style.height = "80px";
-        btn.style.display = "flex";
-        btn.style.flexDirection = "column";
-        btn.style.alignItems = "center";
-        btn.style.justifyContent = "center";
-        btn.style.transition = "transform 0.2s";
-        
-        if (node.isCompleted) {
-            btn.style.backgroundColor = "#7f8c8d"; 
-            btn.style.borderColor = "#95a5a6";
-            btn.disabled = true;
-        } else {
-            btn.style.backgroundColor = "#2ecc71"; 
-            btn.style.cursor = "pointer";
-            btn.style.boxShadow = "0 0 10px rgba(46, 204, 113, 0.5)";
-            btn.onmouseover = () => btn.style.transform = "scale(1.1)";
-            btn.onmouseout = () => btn.style.transform = "scale(1)";
-            btn.onclick = () => {
-                connection.invoke("MoveToNextNode", currentRoomName, node.id).catch(err => console.error(err));
-            };
-        }
-        
-        mapContainer.appendChild(btn);
+            if (node.isCompleted || myCurrentNodeId === node.id) {
+                // Prošlé nebo aktuální
+                btn.style.backgroundColor = (myCurrentNodeId === node.id) ? "#f39c12" : "#7f8c8d"; 
+                btn.style.borderColor = "#95a5a6";
+                btn.disabled = true;
+            } else if (isClickable) {
+                // Dostupné další kroky
+                btn.style.backgroundColor = "#2ecc71"; 
+                btn.style.cursor = "pointer";
+                btn.style.boxShadow = "0 0 15px rgba(46, 204, 113, 0.8)";
+                btn.onmouseover = () => btn.style.transform = "scale(1.2)";
+                btn.onmouseout = () => btn.style.transform = "scale(1)";
+                btn.onclick = () => {
+                    connection.invoke("MoveToNextNode", currentRoomName, node.id).catch(err => console.error(err));
+                };
+            } else {
+                // Vzdálená budoucnost
+                btn.style.backgroundColor = "#34495e";
+                btn.style.opacity = "0.5";
+                btn.disabled = true;
+            }
+            
+            row.appendChild(btn);
+        });
+        mapContainer.appendChild(row);
+    }
+
+    // 3. Vykreslení spojovacích čar (SVG) po vložení do DOMu
+    setTimeout(() => drawMapLines(mapContainer), 100);
+}
+
+function drawMapLines(container) {
+    // Odstraní staré plátno, pokud existuje
+    let oldSvg = document.getElementById("map-svg");
+    if (oldSvg) oldSvg.remove();
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = "map-svg";
+    svg.style.position = "absolute";
+    svg.style.top = "0";
+    svg.style.left = "0";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.zIndex = "1";
+    svg.style.pointerEvents = "none";
+
+    const containerRect = container.getBoundingClientRect();
+
+    gameMap.forEach(node => {
+        const fromEl = document.getElementById(`node-${node.id}`);
+        if (!fromEl) return;
+        const fromRect = fromEl.getBoundingClientRect();
+
+        node.connectedTo.forEach(targetId => {
+            const toEl = document.getElementById(`node-${targetId}`);
+            if (!toEl) return;
+            const toRect = toEl.getBoundingClientRect();
+
+            // Výpočet pozic relativně ke kontejneru
+            const x1 = (fromRect.left + fromRect.width / 2) - containerRect.left;
+            const y1 = (fromRect.top + fromRect.height / 2) - containerRect.top;
+            const x2 = (toRect.left + toRect.width / 2) - containerRect.left;
+            const y2 = (toRect.top + toRect.height / 2) - containerRect.top;
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1);
+            line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2);
+            line.setAttribute("y2", y2);
+            line.setAttribute("stroke", "rgba(255, 255, 255, 0.3)");
+            line.setAttribute("stroke-width", "3");
+
+            // Zvýrazníme čáru, pokud je to naše dostupná cesta
+            if (myCurrentNodeId === node.id || (myCurrentNodeId === -1 && node.floor === 0)) {
+                 line.setAttribute("stroke", "rgba(46, 204, 113, 0.6)");
+                 line.setAttribute("stroke-width", "5");
+            }
+
+            svg.appendChild(line);
+        });
     });
+
+    container.appendChild(svg);
 }

@@ -5,26 +5,17 @@ using System.Linq;
 
 namespace RoguelikeCardGame.Models
 {
-    // Typy místností na mapě
     public enum NodeType
     {
-        Encounter,        // Běžný souboj
-        EliteEncounter,   // Těžký souboj (lepší odměny)
-        RestPlace,        // Odpočinek (Heal / Upgrade)
-        Shop,             // Obchod s kartami a relikviemi
-        Treasure,         // Truhla s pokladem
-        Event,            // Náhodná událost
-        Boss              // Finální souboj
+        Encounter, EliteEncounter, RestPlace, Shop, Treasure, Event, Boss
     }
 
-    // Definice jednoho bodu na mapě
     public class Node
     {
         public int Id { get; set; }
-        public int Floor { get; set; } // Patro (výška na mapě)
+        public int Floor { get; set; } 
         public NodeType Type { get; set; }
         public bool IsCompleted { get; set; } = false;
-        // ID uzlů, do kterých lze z tohoto místa jít
         public List<int> ConnectedTo { get; set; } = new List<int>(); 
     }
 
@@ -40,21 +31,18 @@ namespace RoguelikeCardGame.Models
         public string RoomName { get; set; } = string.Empty;
         public List<Player> Players { get; set; } = new List<Player>();
         
-        // --- PARAMETRY AKTUÁLNÍHO BOJE A HRY ---
-        public int CurrentAct { get; set; } = 1; // Pamatuje si, v jakém jsme Aktu
-        public int CurrentKarma { get; set; } = 0; // OPRAVENO: Je tu už pouze JEDNOU!
+        public int CurrentAct { get; set; } = 1; 
+        public int CurrentKarma { get; set; } = 0; 
         
         public string EnemyName { get; set; } = "Neznámý nepřítel"; 
         public int EnemyHp { get; set; } = 100;
         public int EnemyMaxHp { get; set; } = 100; 
         
-        // --- EKONOMIKA A POSTUP ---
-        public int TeamGold { get; set; } = 50; // Společná pokladna
+        public int TeamGold { get; set; } = 50; 
         public List<Relic> TeamRelics { get; set; } = new List<Relic>();
         
-        // Mapa a aktuální pozice
         public List<Node> Map { get; set; } = new List<Node>();
-        public int CurrentNodeId { get; set; } = 0;
+        public int CurrentNodeId { get; set; } = -1; // -1 znamená, že jsme ještě nezačali (vybíráme 0. patro)
 
         public ConcurrentDictionary<string, List<CardPlayData>> PlayedCardsThisTurn { get; set; } = new ConcurrentDictionary<string, List<CardPlayData>>();
         public List<string> PlayersReady { get; set; } = new List<string>();
@@ -62,35 +50,61 @@ namespace RoguelikeCardGame.Models
         public GameRoom(string roomName)
         {
             RoomName = roomName;
-            GenerateMap(); // Při vytvoření místnosti vygenerujeme mapu
+            GenerateMap(); 
         }
 
-        // --- LOGIKA GENEROVÁNÍ MAPY ---
-        // Vytvoříme jednoduchou cestu: Souboj -> Event -> Obchod -> Poklad -> Boss
+        // --- NOVÉ: ROZVĚTVENÉ GENEROVÁNÍ MAPY ---
         public void GenerateMap()
         {
-            Map = new List<Node>
-            {
-                new Node { Id = 0, Floor = 0, Type = NodeType.Encounter },
-                new Node { Id = 1, Floor = 1, Type = NodeType.Event },
-                new Node { Id = 2, Floor = 2, Type = NodeType.Shop },
-                new Node { Id = 3, Floor = 3, Type = NodeType.EliteEncounter },
-                new Node { Id = 4, Floor = 4, Type = NodeType.Treasure },
-                new Node { Id = 5, Floor = 5, Type = NodeType.RestPlace },
-                new Node { Id = 6, Floor = 6, Type = NodeType.Boss }
-            };
+            Map = new List<Node>();
+            int floors = 10;
+            int nodesPerFloor = 3;
+            int idCounter = 1;
 
-            // Propojení uzlů lineárně (0 -> 1 -> 2...)
-            for (int i = 0; i < Map.Count - 1; i++)
+            // 1. Vytvoření uzlů
+            for (int f = 0; f < floors; f++)
             {
-                Map[i].ConnectedTo.Add(Map[i + 1].Id);
+                int count = (f >= floors - 2) ? 1 : nodesPerFloor; // Předposlední a poslední patro má 1 uzel
+                for (int i = 0; i < count; i++)
+                {
+                    NodeType type = NodeType.Encounter;
+                    if (f == floors - 1) type = NodeType.Boss;
+                    else if (f == floors - 2) type = NodeType.RestPlace;
+                    else if (f > 0)
+                    {
+                        Random r = new Random(Guid.NewGuid().GetHashCode());
+                        int roll = r.Next(100);
+                        if (roll < 40) type = NodeType.Encounter;
+                        else if (roll < 60) type = NodeType.Event;
+                        else if (roll < 70) type = NodeType.Shop;
+                        else if (roll < 85) type = NodeType.EliteEncounter;
+                        else type = NodeType.Treasure;
+                    }
+                    Map.Add(new Node { Id = idCounter++, Floor = f, Type = type });
+                }
             }
-        }
 
-        // Metoda pro posun do další místnosti
-        public Node? GetCurrentNode()
-        {
-            return Map.FirstOrDefault(n => n.Id == CurrentNodeId);
+            // 2. Propojení uzlů (Čáry na mapě)
+            for (int f = 0; f < floors - 1; f++)
+            {
+                var curr = Map.Where(n => n.Floor == f).ToList();
+                var next = Map.Where(n => n.Floor == f + 1).ToList();
+
+                if (next.Count == 1)
+                {
+                    foreach (var node in curr) node.ConnectedTo.Add(next[0].Id);
+                }
+                else
+                {
+                    Random r = new Random(Guid.NewGuid().GetHashCode());
+                    for (int i = 0; i < curr.Count; i++)
+                    {
+                        curr[i].ConnectedTo.Add(next[i].Id); // Rovně
+                        if (i > 0 && r.Next(2) == 0) curr[i].ConnectedTo.Add(next[i - 1].Id); // Šikmo doleva
+                        if (i < next.Count - 1 && r.Next(2) == 0) curr[i].ConnectedTo.Add(next[i + 1].Id); // Šikmo doprava
+                    }
+                }
+            }
         }
     }
 }
