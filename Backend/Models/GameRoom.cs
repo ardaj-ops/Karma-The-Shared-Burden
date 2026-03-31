@@ -5,10 +5,7 @@ using System.Linq;
 
 namespace RoguelikeCardGame.Models
 {
-    public enum NodeType
-    {
-        Encounter, EliteEncounter, RestPlace, Shop, Treasure, Event, Boss
-    }
+    public enum NodeType { Encounter, EliteEncounter, RestPlace, Shop, Treasure, Event, Boss }
 
     public class Node
     {
@@ -24,6 +21,8 @@ namespace RoguelikeCardGame.Models
         public string CardId { get; set; } = string.Empty;
         public int KarmaShift { get; set; }
         public int Damage { get; set; }
+        // NOVÉ: Cíl útoku
+        public string TargetEnemyId { get; set; } = string.Empty; 
     }
 
     public class GameRoom
@@ -42,7 +41,10 @@ namespace RoguelikeCardGame.Models
         public List<Relic> TeamRelics { get; set; } = new List<Relic>();
         
         public List<Node> Map { get; set; } = new List<Node>();
-        public int CurrentNodeId { get; set; } = -1; // -1 znamená, že jsme ještě nezačali (vybíráme 0. patro)
+        public int CurrentNodeId { get; set; } = -1; 
+
+        // NOVÉ: Paměť pro hlasování o další místnosti (Jméno hráče -> ID uzlu)
+        public ConcurrentDictionary<string, int> MapVotes { get; set; } = new ConcurrentDictionary<string, int>();
 
         public ConcurrentDictionary<string, List<CardPlayData>> PlayedCardsThisTurn { get; set; } = new ConcurrentDictionary<string, List<CardPlayData>>();
         public List<string> PlayersReady { get; set; } = new List<string>();
@@ -53,7 +55,6 @@ namespace RoguelikeCardGame.Models
             GenerateMap(); 
         }
 
-        // --- NOVÉ: ROZVĚTVENÉ GENEROVÁNÍ MAPY ---
         public void GenerateMap()
         {
             Map = new List<Node>();
@@ -61,10 +62,9 @@ namespace RoguelikeCardGame.Models
             int nodesPerFloor = 3;
             int idCounter = 1;
 
-            // 1. Vytvoření uzlů
             for (int f = 0; f < floors; f++)
             {
-                int count = (f >= floors - 2) ? 1 : nodesPerFloor; // Předposlední a poslední patro má 1 uzel
+                int count = (f >= floors - 2) ? 1 : nodesPerFloor; 
                 for (int i = 0; i < count; i++)
                 {
                     NodeType type = NodeType.Encounter;
@@ -84,7 +84,6 @@ namespace RoguelikeCardGame.Models
                 }
             }
 
-            // 2. Propojení uzlů (Čáry na mapě)
             for (int f = 0; f < floors - 1; f++)
             {
                 var curr = Map.Where(n => n.Floor == f).ToList();
@@ -99,9 +98,9 @@ namespace RoguelikeCardGame.Models
                     Random r = new Random(Guid.NewGuid().GetHashCode());
                     for (int i = 0; i < curr.Count; i++)
                     {
-                        curr[i].ConnectedTo.Add(next[i].Id); // Rovně
-                        if (i > 0 && r.Next(2) == 0) curr[i].ConnectedTo.Add(next[i - 1].Id); // Šikmo doleva
-                        if (i < next.Count - 1 && r.Next(2) == 0) curr[i].ConnectedTo.Add(next[i + 1].Id); // Šikmo doprava
+                        curr[i].ConnectedTo.Add(next[i].Id);
+                        if (i > 0 && r.Next(2) == 0) curr[i].ConnectedTo.Add(next[i - 1].Id); 
+                        if (i < next.Count - 1 && r.Next(2) == 0) curr[i].ConnectedTo.Add(next[i + 1].Id); 
                     }
                 }
             }
