@@ -16,6 +16,10 @@ let myGold = 0;
 let myDrawPileCount = 0;
 let myDiscardPileCount = 0;
 
+let myHp = 0;
+let myMaxHp = 0;
+let myBlock = 0;
+
 // --- 1. LOBBY A PŘIPOJENÍ ---
 function pickHero(hero) {
     playerClass = hero;
@@ -92,38 +96,35 @@ connection.on("GameStarted", (roomName, initialMap) => {
 
 connection.on("UpdateRelics", (relicsList) => {
     const relicsContainer = document.getElementById("relics-list");
-    relicsContainer.innerHTML = ""; // Vyčistíme text
+    relicsContainer.innerHTML = ""; 
     
     if (relicsList.length === 0) {
         relicsContainer.innerText = "Zatím žádné";
         return;
     }
     
-    // Projdeme všechny relikvie ze serveru
     relicsList.forEach(relic => {
         const span = document.createElement("span");
         span.innerText = `[${relic.name}] `;
-        
-        // Zde je to kouzlo: title vytvoří nativní tooltip při najetí myší!
         span.title = relic.description; 
-        
-        // Přidáme trošku stylu, aby hráč věděl, že na to má najet myší
         span.style.cursor = "help";
         span.style.borderBottom = "2px dotted #2c3e50";
         span.style.marginRight = "10px";
-        
         relicsContainer.appendChild(span);
     });
 });
 
-// --- 3. BITEVNÍ SYSTÉM ---
-connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawCount, discardCount) => {
+// --- 3. BITEVNÍ SYSTÉM (Více nepřátel) ---
+connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawCount, discardCount, hp, maxHp, block) => {
     cardDatabase = serverCards; 
     myHand = hand;
     myMana = mana;
     myGold = gold || 0;
     myDrawPileCount = drawCount || 0;
     myDiscardPileCount = discardCount || 0;
+    myHp = hp || 0;
+    myMaxHp = maxHp || 0;
+    myBlock = block || 0;
     
     updateStatsUI();
     renderHand(); 
@@ -138,15 +139,17 @@ connection.on("PlayerReadyLog", (player, readyCount, totalPlayers) => {
     logMessage(`✅ ${player} ukončil tah. (${readyCount}/${totalPlayers})`);
 });
 
-connection.on("TurnResolved", (summary, totalDamage, newKarma, enemyHp) => {
+// UPRAVENO PRO SKUPINU NEPŘÁTEL
+connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => {
     logMessage(`--- TAH VYHODNOCEN ---`);
-    logMessage(`💥 Nepřítel utrpěl ${totalDamage} DMG! Zbývá mu ${enemyHp} HP.`);
+    logMessage(`💥 Uštědřili jste ${totalDamage} plošného DMG!`);
     
-    document.getElementById("enemy-hp").innerText = enemyHp;
-    document.getElementById("karma-value").innerText = newKarma;
+    renderEnemies(enemiesArray);
+    updateKarmaUI(newKarma);
 });
 
-connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawCount, discardCount, hp, maxHp, block, intentDescription) => {
+// UPRAVENO PRO SKUPINU NEPŘÁTEL
+connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawCount, discardCount, hp, maxHp, block, enemiesArray) => {
     myHand = updatedHand;
     myMana = updatedMana;
     myGold = updatedGold || 0;
@@ -162,38 +165,22 @@ connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, dra
     document.getElementById("end-turn-btn").disabled = false;
     document.getElementById("end-turn-btn").style.backgroundColor = "#8e44ad";
     
-    // Zobrazíme novou myšlenku nepřítele pro tohle kolo
-    if(document.getElementById("enemy-intent") && intentDescription) {
-        document.getElementById("enemy-intent").innerText = intentDescription;
-    }
-    
+    renderEnemies(enemiesArray);
     updateStatsUI();
     renderHand(); 
 });
 
-connection.on("EnteredNode", (nodeType, nodeData, enemyName, enemyHp, enemyMaxHp, intentDescription) => {
+// UPRAVENO PRO SKUPINU NEPŘÁTEL
+connection.on("EnteredNode", (nodeType, nodeData, enemiesArray) => {
     logMessage(`📍 Vstupujete do: ${nodeType}`);
     
     if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") {
-        document.getElementById("enemy-name").innerText = enemyName;
-        document.getElementById("enemy-hp").innerText = enemyHp;
-        document.getElementById("enemy-max-hp").innerText = enemyMaxHp;
-        
-        // Zobrazíme myšlenku nepřítele
-        if(document.getElementById("enemy-intent")) {
-            document.getElementById("enemy-intent").innerText = intentDescription;
-        }
-
+        renderEnemies(enemiesArray);
         toggleUI("battle");
     } else if (nodeType === "Treasure" || nodeType === "RestPlace") {
         toggleUI("map");
         renderMap();
     }
-});
-
-connection.on("ReceiveTreasure", (relicName) => {
-    logMessage(`🏆 Tým získal relikvii: ${relicName}`);
-    document.getElementById("relics-list").innerText += ` | ${relicName}`;
 });
 
 connection.on("BattleWon", (message) => {
@@ -221,16 +208,22 @@ function playCard(cardId, karmaShift, damage) {
     if (isGameOver) return; 
     if (turnEnded) { alert("Už jsi ukončil tah!"); return; }
     
-    const cardCost = cardDatabase[cardId] ? cardDatabase[cardId].cost : 1;
+    const cardData = cardDatabase[cardId];
+    const cardCost = cardData ? cardData.cost : 1;
     if (myMana < cardCost) { alert("Nemáš dostatek Many!"); return; }
 
     myMana -= cardCost; 
     
-    // Odstranění z ruky a přesun do odhazovacího balíčku
     const cardIndex = myHand.indexOf(cardId);
     if (cardIndex > -1) {
         myHand.splice(cardIndex, 1); 
         myDiscardPileCount++; 
+    }
+
+    if(cardData) {
+        myBlock += (cardData.block || 0);
+        myHp += (cardData.heal || 0);
+        if(myHp > myMaxHp) myHp = myMaxHp;
     }
     
     updateStatsUI();
@@ -251,7 +244,103 @@ function endTurn() {
         .catch(err => console.error(err));
 }
 
+// --- NOVÉ: SYSTÉM ODMĚN ---
+let currentRelicReward = null; 
+
+connection.on("ShowRewardScreen", (cardChoices, relicChoice) => {
+    logMessage(`🎉 Výhra! Vyber si odměnu.`);
+    toggleUI("reward");
+
+    currentRelicReward = relicChoice;
+
+    const relicContainer = document.getElementById("relic-reward-container");
+    if (relicChoice) {
+        relicContainer.style.display = "block";
+        document.getElementById("reward-relic-name").innerText = relicChoice.name;
+        document.getElementById("reward-relic-desc").innerText = relicChoice.description;
+    } else {
+        relicContainer.style.display = "none";
+    }
+
+    const cardContainer = document.getElementById("card-reward-container");
+    cardContainer.innerHTML = "";
+
+    cardChoices.forEach(card => {
+        const btn = document.createElement("button");
+        let color = "#ecf0f1"; 
+        if(card.karmaShift < 0) color = "#ffcccc"; 
+        if(card.karmaShift > 0) color = "#ccffcc"; 
+
+        btn.innerHTML = `<strong>${card.name}</strong><br><em>${card.cost} Many</em><br><hr style="margin:5px 0;"><small>${card.description}</small>`;
+        btn.style.padding = "15px";
+        btn.style.width = "160px";
+        btn.style.border = "3px solid #34495e";
+        btn.style.borderRadius = "8px";
+        btn.style.backgroundColor = color;
+        btn.style.cursor = "pointer";
+        btn.style.transition = "transform 0.2s";
+        
+        btn.onmouseover = () => btn.style.transform = "scale(1.05)";
+        btn.onmouseout = () => btn.style.transform = "scale(1)";
+
+        btn.onclick = () => {
+            let relId = currentRelicReward ? currentRelicReward.id : "";
+            let relName = currentRelicReward ? currentRelicReward.name : "";
+            let relDesc = currentRelicReward ? currentRelicReward.description : "";
+            
+            connection.invoke("ClaimReward", currentRoomName, playerName, card.id, relId, relName, relDesc)
+                .catch(err => console.error(err));
+        };
+        
+        cardContainer.appendChild(btn);
+    });
+});
+
+connection.on("RewardClaimed", () => {
+    toggleUI("map");
+    renderMap();
+});
+
+function skipReward() {
+    let relId = currentRelicReward ? currentRelicReward.id : "";
+    let relName = currentRelicReward ? currentRelicReward.name : "";
+    let relDesc = currentRelicReward ? currentRelicReward.description : "";
+    
+    connection.invoke("ClaimReward", currentRoomName, playerName, "", relId, relName, relDesc)
+        .catch(err => console.error(err));
+}
+
 // --- 5. VYKRESLOVÁNÍ UI ---
+function renderEnemies(enemiesArray) {
+    const container = document.getElementById("enemies-container");
+    if (!container) return;
+    container.innerHTML = "";
+    
+    if (!enemiesArray || enemiesArray.length === 0) return;
+
+    enemiesArray.forEach(e => {
+        if (e.hp <= 0) return; 
+        
+        const div = document.createElement("div");
+        div.style.background = "#c0392b";
+        div.style.padding = "10px";
+        div.style.borderRadius = "5px";
+        div.style.color = "white";
+        div.style.textAlign = "center";
+        div.style.minWidth = "160px";
+        div.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)";
+        
+        div.innerHTML = `
+            <h3 style="margin: 0 0 5px 0; font-size: 18px;">${e.name}</h3>
+            <div style="font-weight: bold;">${e.hp} / ${e.maxHp} HP</div>
+            <div style="margin-top: 8px; font-size: 13px; background: rgba(0,0,0,0.4); padding: 5px; border-radius: 3px; color: #f1c40f;">
+                ${e.currentAction.intentDescription}
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
 function updateStatsUI() {
     const manaElement = document.getElementById("mana-value");
     if (manaElement) manaElement.innerText = myMana;
@@ -264,6 +353,34 @@ function updateStatsUI() {
 
     const discardElement = document.getElementById("discard-count");
     if (discardElement) discardElement.innerText = `🗑️ Odhozeno: ${myDiscardPileCount}`;
+
+    const hpElement = document.getElementById("hero-hp");
+    if (hpElement) hpElement.innerText = myHp;
+
+    const maxHpElement = document.getElementById("hero-max-hp");
+    if (maxHpElement) maxHpElement.innerText = myMaxHp;
+
+    const blockElement = document.getElementById("hero-block");
+    if (blockElement) blockElement.innerText = myBlock;
+}
+
+function updateKarmaUI(karma) {
+    const karmaValEl = document.getElementById("karma-value");
+    if(karmaValEl) karmaValEl.innerText = karma;
+
+    let statusText = " (Rovnováha ⚖️)";
+    let statusColor = "white";
+    
+    if (karma <= -10) { statusText = " (Hluboká Temnota 🌑)"; statusColor = "#e74c3c"; }
+    else if (karma < 0) { statusText = " (Příklon ke stínu 🌘)"; statusColor = "#e67e22"; }
+    else if (karma >= 10) { statusText = " (Čisté Světlo ☀️)"; statusColor = "#f1c40f"; }
+    else if (karma > 0) { statusText = " (Příklon ke světlu 🌤️)"; statusColor = "#f39c12"; }
+    
+    const statusEl = document.getElementById("karma-status");
+    if(statusEl) {
+        statusEl.innerText = statusText;
+        statusEl.style.color = statusColor;
+    }
 }
 
 function renderHand() {
@@ -299,19 +416,20 @@ function toggleUI(state) {
     const battleHUD = document.getElementById("battle-hud");
     const handWrapper = document.getElementById("hand-wrapper");
     const mapUI = document.getElementById("map-container"); 
+    const rewardScreen = document.getElementById("reward-screen");
     
+    if(battleHUD) battleHUD.style.display = "none";
+    if(handWrapper) handWrapper.style.display = "none";
+    if(mapUI) mapUI.style.display = "none";
+    if(rewardScreen) rewardScreen.style.display = "none";
+
     if (state === "battle") {
         if(battleHUD) battleHUD.style.display = "block";
         if(handWrapper) handWrapper.style.display = "block";
-        if(mapUI) mapUI.style.display = "none";
     } else if (state === "map") {
-        if(battleHUD) battleHUD.style.display = "none";
-        if(handWrapper) handWrapper.style.display = "none";
         if(mapUI) mapUI.style.display = "block";
-    } else {
-        if(battleHUD) battleHUD.style.display = "none";
-        if(handWrapper) handWrapper.style.display = "none";
-        if(mapUI) mapUI.style.display = "none";
+    } else if (state === "reward") {
+        if(rewardScreen) rewardScreen.style.display = "block";
     }
 }
 
