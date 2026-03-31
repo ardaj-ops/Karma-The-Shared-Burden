@@ -16,14 +16,24 @@ let currentEnemiesArray = [];
 let selectedTargetCard = null; 
 let currentMapVotes = {}; 
 
-// --- POJISTKA PRO LOBBY (Řeší problém z Obrázku 1) ---
-document.addEventListener("DOMContentLoaded", () => {
-    toggleUI("none");
-    document.getElementById("lobby-screen").style.display = "block";
-});
+// --- BEZPEČNÉ ZOBRAZOVÁNÍ A SKRÝVÁNÍ (Řeší problém s .hidden !important) ---
+function showElement(id, displayType = "block") {
+    let el = document.getElementById(id);
+    if (el) {
+        el.classList.remove("hidden");
+        el.style.display = displayType;
+    }
+}
 
-// --- BEZPEČNÉ ZÍSKÁNÍ DAT ZE SERVERU (Řeší problém z Obrázku 2) ---
-// Různé verze .NET posílají vlastnosti v JSONu jinak (Id vs id). Toto řeší obojí.
+function hideElement(id) {
+    let el = document.getElementById(id);
+    if (el) {
+        el.classList.add("hidden");
+        el.style.display = "none";
+    }
+}
+
+// --- BEZPEČNÉ ZÍSKÁNÍ DAT ZE SERVERU ---
 const safeGet = (obj, propLower, propUpper) => obj[propLower] !== undefined ? obj[propLower] : obj[propUpper];
 const getTypeString = (typeVal) => {
     if (typeof typeVal === "string") return typeVal;
@@ -68,8 +78,8 @@ function joinLobby() { if(!getCredentials()) return; connection.start().then(() 
 function startGame() { connection.invoke("StartGame", currentRoomName).catch(err => console.error(err)); }
 
 function showWaitingRoom() {
-    document.getElementById("lobby-screen").style.display = "none";
-    document.getElementById("waiting-screen").style.display = "block";
+    hideElement("lobby-screen");
+    showElement("waiting-screen");
     document.getElementById("display-room-name").innerText = currentRoomName;
 }
 
@@ -79,11 +89,15 @@ connection.on("LobbyUpdate", (players) => {
     const list = document.getElementById("lobby-players-list"); list.innerHTML = "";
     players.forEach(p => { const li = document.createElement("li"); li.innerText = "🧙‍♂️ " + p; list.appendChild(li); });
 });
-connection.on("YouAreHost", () => { document.getElementById("start-game-btn").style.display = "inline-block"; document.getElementById("waiting-text").style.display = "none"; });
+connection.on("YouAreHost", () => { 
+    showElement("start-game-btn", "inline-block"); 
+    hideElement("waiting-text"); 
+});
 
 connection.on("GameStarted", (roomName, initialMap) => {
-    document.getElementById("waiting-screen").style.display = "none";
-    document.getElementById("game-screen").style.display = "block";
+    hideElement("waiting-screen");
+    showElement("game-screen");
+    
     gameMap = initialMap; myCurrentNodeId = -1; currentMapVotes = {};
     logMessage(`🔥 Hra začala! Hlasujte pro startovní políčko.`);
     toggleUI("map"); renderMap();
@@ -161,16 +175,14 @@ connection.on("EnterEvent", (eventData) => {
     document.getElementById("event-title").innerText = safeGet(eventData, 'title', 'Title');
     document.getElementById("event-desc").innerText = safeGet(eventData, 'desc', 'Desc');
     
-    const optionsContainer = document.getElementById("event-options");
-    optionsContainer.innerHTML = "";
+    const optionsContainer = document.getElementById("event-options"); optionsContainer.innerHTML = "";
     
     let opts = safeGet(eventData, 'options', 'Options') || [];
     opts.forEach(opt => {
         const btn = document.createElement("button");
         btn.innerText = safeGet(opt, 'text', 'Text');
         btn.style.cssText = "padding: 15px 30px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;";
-        btn.onmouseover = () => btn.style.background = "#9b59b6";
-        btn.onmouseout = () => btn.style.background = "#8e44ad";
+        btn.onmouseover = () => btn.style.background = "#9b59b6"; btn.onmouseout = () => btn.style.background = "#8e44ad";
         
         btn.onclick = () => {
             optionsContainer.innerHTML = "<p>Vybráno! Čekáme na ostatní nebo posun...</p>";
@@ -270,10 +282,10 @@ function openUpgradeModal() {
             container.appendChild(btn);
         });
     }
-    document.getElementById("upgrade-modal").style.display = "flex";
+    showElement("upgrade-modal", "flex");
 }
 
-function closeUpgradeModal() { document.getElementById("upgrade-modal").style.display = "none"; }
+function closeUpgradeModal() { hideElement("upgrade-modal"); }
 
 function chooseRestUpgrade(cardId) {
     closeUpgradeModal();
@@ -375,9 +387,9 @@ function showModalWithCards(title, cardIds) {
             container.appendChild(cardElement);
         });
     }
-    document.getElementById("card-modal").style.display = "flex";
+    showElement("card-modal", "flex");
 }
-function closeCardModal() { document.getElementById("card-modal").style.display = "none"; }
+function closeCardModal() { hideElement("card-modal"); }
 function showStartingDeck() { showModalWithCards("Tvůj kompletní balíček", myStartingDeck); }
 function showDrawPile() { showModalWithCards("Karty k líznutí", myDrawPile); }
 function showDiscardPile() { showModalWithCards("Odhozené karty", myDiscardPile); }
@@ -455,36 +467,26 @@ function renderHand() {
 }
 
 function toggleUI(state) {
-    // 1. Zjistíme, jestli se hra už vůbec zapnula
+    // 1. Zaručíme, že se hlavní herní screen bezpečně schová nebo ukáže
     let gameScreen = document.getElementById("game-screen");
     if (gameScreen) {
         if (state === "none") {
-            // Pokud jsme v Lobby, schováme celou herní obrazovku
-            gameScreen.classList.add("hidden");
-            gameScreen.style.display = "none";
+            hideElement("game-screen");
         } else {
-            // Jakmile se zapne jakákoliv část hry, celá herní obrazovka se musí ukázat
-            gameScreen.classList.remove("hidden");
-            gameScreen.style.display = "block";
+            showElement("game-screen");
         }
     }
 
-    // 2. Schováme všechny vnitřní panely
-    ["battle-hud", "hand-wrapper", "map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(id => {
-        let el = document.getElementById(id); 
-        if(el) el.style.display = "none";
-    });
-
-    // 3. Ukážeme jen ten panel, který právě potřebujeme
-    if (state === "battle") { 
-        document.getElementById("battle-hud").style.display = "block"; 
-        document.getElementById("hand-wrapper").style.display = "block"; 
-    } 
-    else if (state === "map") { document.getElementById("map-container").style.display = "block"; } 
-    else if (state === "reward") { document.getElementById("reward-screen").style.display = "block"; } 
-    else if (state === "shop") { document.getElementById("shop-screen").style.display = "block"; } 
-    else if (state === "event") { document.getElementById("event-screen").style.display = "block"; } 
-    else if (state === "rest") { document.getElementById("rest-screen").style.display = "block"; }
+    // 2. Schováme všechna podokna
+    ["battle-hud", "hand-wrapper", "map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(hideElement);
+    
+    // 3. Ukážeme jen to, co má hráč aktuálně vidět
+    if (state === "battle") { showElement("battle-hud"); showElement("hand-wrapper"); } 
+    else if (state === "map") { showElement("map-container"); } 
+    else if (state === "reward") { showElement("reward-screen"); } 
+    else if (state === "shop") { showElement("shop-screen"); } 
+    else if (state === "event") { showElement("event-screen"); } 
+    else if (state === "rest") { showElement("rest-screen"); }
 }
 
 // --- VYLEPŠENÁ MAPA S IKONAMI A HLASOVÁNÍM ---
