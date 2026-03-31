@@ -178,14 +178,16 @@ namespace RoguelikeCardGame.Hubs
                 else if (targetNode.Type == NodeType.Shop)
                 {
                     targetNode.IsCompleted = true;
-                    var allCards = CardDatabase.Cards.Values.ToList();
                     
                     foreach (var p in room.Players)
                     {
-                        var shopCards = allCards.OrderBy(x => rng.Next()).Take(4).Select(c => new { id = c.Id, name = c.Name, desc = c.Description, cost = c.Cost, price = rng.Next(40, 80) }).ToList();
-                        var shopRelics = RelicDatabase.LootRelics.OrderBy(x => rng.Next()).Take(2).Select(r => new { id = r.Id, name = r.Name, desc = r.Description, price = rng.Next(120, 200) }).ToList();
+                        // Zavoláme náš nový čistý ShopManager
+                        var playerShop = ShopManager.GenerateShopForPlayer(p);
+                        
                         await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, new List<ActiveEnemy>());
-                        await Clients.Client(p.ConnectionId).SendAsync("EnterShop", shopCards, shopRelics, 50); 
+                        
+                        // Pošleme strukturovaná data do Frontendu (názvy vlastností se z C# do JS přeloží s malým písmenem, takže to bude perfektně sedět)
+                        await Clients.Client(p.ConnectionId).SendAsync("EnterShop", playerShop.Cards, playerShop.Relics, playerShop.RemoveCost); 
                     }
                 }
                 else if (targetNode.Type == NodeType.Event)
