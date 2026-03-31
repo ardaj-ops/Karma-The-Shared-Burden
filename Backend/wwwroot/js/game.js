@@ -16,12 +16,13 @@ let currentEnemiesArray = [];
 let selectedTargetCard = null; 
 let currentMapVotes = {}; 
 
-// --- BEZPEČNÉ ZOBRAZOVÁNÍ A SKRÝVÁNÍ (Řeší problém s .hidden !important) ---
+// --- ULTIMÁTNÍ BEZPEČNÉ ZOBRAZOVÁNÍ ---
 function showElement(id, displayType = "block") {
     let el = document.getElementById(id);
     if (el) {
         el.classList.remove("hidden");
-        el.style.display = displayType;
+        // Tohle přebije cokoliv, co by bránilo zobrazení
+        el.style.setProperty("display", displayType, "important");
     }
 }
 
@@ -29,42 +30,50 @@ function hideElement(id) {
     let el = document.getElementById(id);
     if (el) {
         el.classList.add("hidden");
-        el.style.display = "none";
+        el.style.setProperty("display", "none", "important");
     }
 }
 
-// --- BEZPEČNÉ ZÍSKÁNÍ DAT ZE SERVERU ---
-const safeGet = (obj, propLower, propUpper) => obj[propLower] !== undefined ? obj[propLower] : obj[propUpper];
+// --- BEZPEČNÉ ZÍSKÁNÍ DAT ---
+function safeGet(obj, propLower, propUpper) {
+    if (!obj) return undefined;
+    if (obj[propLower] !== undefined) return obj[propLower];
+    if (obj[propUpper] !== undefined) return obj[propUpper];
+    return undefined;
+}
+
 const getTypeString = (typeVal) => {
     if (typeof typeVal === "string") return typeVal;
     const typeMap = ["Encounter", "EliteEncounter", "RestPlace", "Shop", "Treasure", "Event", "Boss"];
     return typeMap[typeVal] || "Encounter";
 };
 
-// --- DYNAMICKÉ VYLEPŠENÍ KARET ---
 function getCardData(cardId) {
     let isUpgraded = cardId.endsWith("+");
     let baseId = isUpgraded ? cardId.slice(0, -1) : cardId;
     let base = cardDatabase[baseId];
-    
     if (!base) return { id: cardId, name: cardId, cost: 1, karmaShift: 0, damage: 5, description: "" };
-    
     if (isUpgraded) {
         return {
-            id: cardId,
-            name: "⭐ " + base.name,
-            damage: (base.damage > 0) ? base.damage + 3 : 0,
-            block: (base.block > 0) ? base.block + 3 : 0,
-            heal: (base.heal > 0) ? base.heal + 2 : 0,
-            cost: Math.max(0, base.cost - 1),
-            karmaShift: base.karmaShift,
-            description: base.description + " (Vylepšeno)"
+            id: cardId, name: "⭐ " + base.name,
+            damage: (base.damage > 0) ? base.damage + 3 : 0, block: (base.block > 0) ? base.block + 3 : 0, heal: (base.heal > 0) ? base.heal + 2 : 0,
+            cost: Math.max(0, base.cost - 1), karmaShift: base.karmaShift, description: base.description + " (Vylepšeno)"
         };
     }
     return { ...base, id: cardId };
 }
 
-// --- 1. LOBBY A PŘIPOJENÍ ---
+// --- LOGOVÁNÍ UDÁLOSTÍ DO HRY ---
+function logMessage(msg) {
+    const logEl = document.getElementById("log");
+    if (!logEl) return;
+    const li = document.createElement("li");
+    li.innerText = msg;
+    logEl.appendChild(li);
+    logEl.scrollTop = logEl.scrollHeight; // Posune na konec výpisu
+}
+
+// --- LOBBY A HRA ---
 function pickHero(hero) { playerClass = hero; document.getElementById("selected-hero-text").innerText = hero; }
 function getCredentials() {
     playerName = document.getElementById("player-name-input").value.trim();
@@ -77,41 +86,29 @@ function createLobby() { if(!getCredentials()) return; connection.start().then((
 function joinLobby() { if(!getCredentials()) return; connection.start().then(() => { connection.invoke("JoinLobby", currentRoomName, playerName, playerClass).catch(err => console.error(err)); showWaitingRoom(); }); }
 function startGame() { connection.invoke("StartGame", currentRoomName).catch(err => console.error(err)); }
 
-function showWaitingRoom() {
-    hideElement("lobby-screen");
-    showElement("waiting-screen");
-    document.getElementById("display-room-name").innerText = currentRoomName;
-}
+function showWaitingRoom() { hideElement("lobby-screen"); showElement("waiting-screen"); document.getElementById("display-room-name").innerText = currentRoomName; }
 
-// --- 2. SIGNALR UDÁLOSTI ---
 connection.on("LobbyError", (msg) => { alert(msg); location.reload(); });
 connection.on("LobbyUpdate", (players) => {
     const list = document.getElementById("lobby-players-list"); list.innerHTML = "";
     players.forEach(p => { const li = document.createElement("li"); li.innerText = "🧙‍♂️ " + p; list.appendChild(li); });
 });
-connection.on("YouAreHost", () => { 
-    showElement("start-game-btn", "inline-block"); 
-    hideElement("waiting-text"); 
-});
+connection.on("YouAreHost", () => { showElement("start-game-btn", "inline-block"); hideElement("waiting-text"); });
 
-// --- START HRY A PŘÍJEM MAPY ---
 connection.on("GameStarted", (roomName, initialMap) => {
-    console.log("🔥 GAME STARTED! Data mapy ze serveru:", initialMap); // DETEKTIVNÍ VÝPIS 1
-
-    hideElement("waiting-screen");
-    showElement("game-screen");
+    console.log("=========================================");
+    console.log("🔥 GAME STARTED EVENT PŘIJAT!");
+    console.log("Data mapy ze serveru:", initialMap);
     
-    // Ochrana pro případ, že by mapa přišla prázdná
+    hideElement("waiting-screen");
+    showElement("game-screen"); // Tohle MUSÍ ukázat obrazovku
+    
     gameMap = initialMap || []; 
     myCurrentNodeId = -1; currentMapVotes = {};
     logMessage(`🔥 Hra začala! Hlasujte pro startovní políčko.`);
-    toggleUI("map"); 
     
-    try {
-        renderMap();
-    } catch (err) {
-        console.error("❌ KRITICKÁ CHYBA PŘI VYKRESLOVÁNÍ MAPY:", err); // DETEKTIVNÍ VÝPIS 2
-    }
+    toggleUI("map"); 
+    renderMap();
 });
 
 connection.on("UpdateRelics", (relicsList) => {
@@ -135,66 +132,45 @@ connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawPile, d
     updateStatsUI(); renderHand(); 
 });
 
-connection.on("CardPlayedLog", (player, cardId) => {
-    const cData = getCardData(cardId);
-    logMessage(`🎴 ${player} připravil kartu: ${cData.name}`);
-});
-
+connection.on("CardPlayedLog", (player, cardId) => { const cData = getCardData(cardId); logMessage(`🎴 ${player} připravil kartu: ${cData.name}`); });
 connection.on("PlayerReadyLog", (player, readyCount, totalPlayers) => { logMessage(`✅ ${player} ukončil tah. (${readyCount}/${totalPlayers})`); });
-
-connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => {
-    logMessage(`--- TAH VYHODNOCEN ---`);
-    currentEnemiesArray = enemiesArray; renderEnemies(enemiesArray); updateKarmaUI(newKarma);
-});
+connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => { logMessage(`--- TAH VYHODNOCEN ---`); currentEnemiesArray = enemiesArray; renderEnemies(enemiesArray); updateKarmaUI(newKarma); });
 
 connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawPile, discardPile, hp, maxHp, block, enemiesArray) => {
     myHand = updatedHand; myMana = updatedMana; myGold = updatedGold || 0;
     myDrawPile = drawPile || []; myDiscardPile = discardPile || [];
     myDrawPileCount = myDrawPile.length; myDiscardPileCount = myDiscardPile.length;
     myHp = hp || 0; myMaxHp = maxHp || 0; myBlock = block || 0;
-    
     turnEnded = false; currentEnemiesArray = enemiesArray; selectedTargetCard = null; 
     document.getElementById("end-turn-btn").disabled = false; document.getElementById("end-turn-btn").style.backgroundColor = "#8e44ad";
-    
     renderEnemies(enemiesArray); updateStatsUI(); renderHand(); 
 });
 
 connection.on("EnteredNode", (nodeTypeRaw, nodeData, enemiesArray) => {
-    let nodeType = getTypeString(nodeTypeRaw);
-    logMessage(`📍 Vstupujete do: ${nodeType}`);
-    myCurrentNodeId = safeGet(nodeData, 'id', 'Id'); 
-    currentMapVotes = {}; currentEnemiesArray = enemiesArray; 
-    
-    let mapNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId);
-    if(mapNode) mapNode.isCompleted = true;
+    let nodeType = getTypeString(nodeTypeRaw); logMessage(`📍 Vstupujete do: ${nodeType}`);
+    myCurrentNodeId = safeGet(nodeData, 'id', 'Id'); currentMapVotes = {}; currentEnemiesArray = enemiesArray; 
+    let mapNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId); if(mapNode) mapNode.isCompleted = true;
 
-    if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") {
-        renderEnemies(enemiesArray); toggleUI("battle");
-    } else if (nodeType === "Treasure") {
+    if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") { renderEnemies(enemiesArray); toggleUI("battle"); } 
+    else if (nodeType === "Treasure") {
         renderEnemies([]); toggleUI("battle");
-        const btn = document.createElement("button");
-        btn.innerText = "💰 Poklad sebrán. Pokračovat na mapu";
+        const btn = document.createElement("button"); btn.innerText = "💰 Poklad sebrán. Pokračovat na mapu";
         btn.style.cssText = "padding: 15px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;";
-        btn.onclick = () => { toggleUI("map"); renderMap(); };
-        document.getElementById("enemies-container").appendChild(btn);
+        btn.onclick = () => { toggleUI("map"); renderMap(); }; document.getElementById("enemies-container").appendChild(btn);
     }
 });
 
-// --- NÁHODNÉ UDÁLOSTI (EVENTS) ---
+// --- EVENTS & SHOP & REST ---
 connection.on("EnterEvent", (eventData) => {
     toggleUI("event");
     document.getElementById("event-title").innerText = safeGet(eventData, 'title', 'Title');
     document.getElementById("event-desc").innerText = safeGet(eventData, 'desc', 'Desc');
-    
     const optionsContainer = document.getElementById("event-options"); optionsContainer.innerHTML = "";
-    
     let opts = safeGet(eventData, 'options', 'Options') || [];
     opts.forEach(opt => {
         const btn = document.createElement("button");
         btn.innerText = safeGet(opt, 'text', 'Text');
         btn.style.cssText = "padding: 15px 30px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;";
-        btn.onmouseover = () => btn.style.background = "#9b59b6"; btn.onmouseout = () => btn.style.background = "#8e44ad";
-        
         btn.onclick = () => {
             optionsContainer.innerHTML = "<p>Vybráno! Čekáme na ostatní nebo posun...</p>";
             connection.invoke("ResolveEventOption", currentRoomName, playerName, safeGet(opt, 'id', 'Id')).catch(err => console.error(err));
@@ -203,12 +179,8 @@ connection.on("EnterEvent", (eventData) => {
     });
 });
 
-connection.on("EventResolved", (newGold, newHp, newMaxHp) => {
-    myGold = newGold; myHp = newHp; myMaxHp = newMaxHp; updateStatsUI();
-    toggleUI("map"); renderMap();
-});
+connection.on("EventResolved", (newGold, newHp, newMaxHp) => { myGold = newGold; myHp = newHp; myMaxHp = newMaxHp; updateStatsUI(); toggleUI("map"); renderMap(); });
 
-// --- OBCHOD (SHOP) ---
 connection.on("EnterShop", (shopCards, shopRelics, removeCost) => {
     toggleUI("shop");
     document.getElementById("shop-gold").innerText = myGold;
@@ -244,15 +216,8 @@ connection.on("EnterShop", (shopCards, shopRelics, removeCost) => {
     });
 });
 
-function buyShopItem(itemId, type, price) {
-    if (myGold < price) { alert("Nemáš dost zlaťáků!"); return; }
-    connection.invoke("BuyShopItem", currentRoomName, playerName, itemId, type, price).catch(err => console.error(err));
-}
-
-function removeCardFromDeck(cardId, price) {
-    if (myGold < price) { alert("Nemáš dost zlaťáků!"); return; }
-    connection.invoke("RemoveCardFromDeck", currentRoomName, playerName, cardId, price).catch(err => console.error(err));
-}
+function buyShopItem(itemId, type, price) { if (myGold < price) { alert("Nemáš dost zlaťáků!"); return; } connection.invoke("BuyShopItem", currentRoomName, playerName, itemId, type, price).catch(err => console.error(err)); }
+function removeCardFromDeck(cardId, price) { if (myGold < price) { alert("Nemáš dost zlaťáků!"); return; } connection.invoke("RemoveCardFromDeck", currentRoomName, playerName, cardId, price).catch(err => console.error(err)); }
 
 connection.on("ShopPurchaseSuccess", (newGold, newDeck) => {
     myGold = newGold; myStartingDeck = newDeck;
@@ -270,49 +235,33 @@ connection.on("ShopPurchaseSuccess", (newGold, newDeck) => {
 
 function leaveShop() { toggleUI("map"); renderMap(); }
 
-// --- TÁBORÁK (REST PLACE) ---
 connection.on("EnterRestPlace", () => { toggleUI("rest"); });
-
 function chooseRestHeal() { connection.invoke("RestPlaceAction", currentRoomName, playerName, "heal", "").catch(err => console.error(err)); }
-
 function openUpgradeModal() {
     const container = document.getElementById("upgrade-modal-content"); container.innerHTML = "";
     let upgradableCards = myStartingDeck.filter(c => !c.endsWith("+"));
-    
-    if (upgradableCards.length === 0) {
-        container.innerHTML = "<p style='color: white;'>Nemáš žádné karty k vylepšení.</p>";
-    } else {
+    if (upgradableCards.length === 0) { container.innerHTML = "<p style='color: white;'>Nemáš žádné karty k vylepšení.</p>"; } 
+    else {
         upgradableCards.forEach(cardId => {
-            const cData = getCardData(cardId);
-            const btn = document.createElement("div");
+            const cData = getCardData(cardId); const btn = document.createElement("div");
             let color = "#ecf0f1"; if(cData.karmaShift < 0) color = "#ffcccc"; if(cData.karmaShift > 0) color = "#ccffcc"; 
             btn.innerHTML = `<strong>${cData.name}</strong><br><em>${cData.cost} Many</em><br><hr style="margin:5px 0;"><small>${cData.description}</small>`;
             btn.style.cssText = `padding: 10px; width: 120px; border: 2px solid #e67e22; border-radius: 8px; background: ${color}; color: #2c3e50; cursor: pointer; transition: transform 0.2s;`;
-            btn.onmouseover = () => btn.style.transform = "scale(1.05)"; btn.onmouseout = () => btn.style.transform = "scale(1)";
             btn.onclick = () => chooseRestUpgrade(cardId);
             container.appendChild(btn);
         });
     }
     showElement("upgrade-modal", "flex");
 }
-
 function closeUpgradeModal() { hideElement("upgrade-modal"); }
+function chooseRestUpgrade(cardId) { closeUpgradeModal(); connection.invoke("RestPlaceAction", currentRoomName, playerName, "upgrade", cardId).catch(err => console.error(err)); }
 
-function chooseRestUpgrade(cardId) {
-    closeUpgradeModal();
-    connection.invoke("RestPlaceAction", currentRoomName, playerName, "upgrade", cardId).catch(err => console.error(err));
-}
-
-connection.on("RestActionCompleted", (newHp, newDeck) => {
-    myHp = newHp; myStartingDeck = newDeck; updateStatsUI();
-    logMessage("Odpočinek u táboráku úspěšně dokončen."); toggleUI("map"); renderMap();
-});
+connection.on("RestActionCompleted", (newHp, newDeck) => { myHp = newHp; myStartingDeck = newDeck; updateStatsUI(); logMessage("Odpočinek u táboráku úspěšně dokončen."); toggleUI("map"); renderMap(); });
 
 // --- BOJ A HRANÍ KARET ---
 function playCard(cardId, karmaShift, damage) {
     if (isGameOver) return; 
     if (turnEnded) { alert("Už jsi ukončil tah!"); return; }
-    
     const cardData = getCardData(cardId);
     if (myMana < cardData.cost) { alert("Nemáš dostatek Many!"); return; }
 
@@ -321,19 +270,15 @@ function playCard(cardId, karmaShift, damage) {
         logMessage("🎯 Vyber cíl pro útok (klikni na nepřítele)!");
         renderEnemies(currentEnemiesArray); 
         return;
-    } else {
-        executeCardPlay(cardId, karmaShift, 0, cardData.cost, "");
-    }
+    } else { executeCardPlay(cardId, karmaShift, 0, cardData.cost, ""); }
 }
 
 function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId) {
     myMana -= cardCost; 
     const cardIndex = myHand.indexOf(cardId);
     if (cardIndex > -1) { myHand.splice(cardIndex, 1); myDiscardPileCount++; }
-    
     const cData = getCardData(cardId);
     myBlock += (cData.block || 0); myHp += (cData.heal || 0); if(myHp > myMaxHp) myHp = myMaxHp;
-    
     selectedTargetCard = null; 
     updateStatsUI(); renderHand(); renderEnemies(currentEnemiesArray); 
     connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage, targetEnemyId).catch(err => console.error(err));
@@ -387,7 +332,6 @@ function skipReward() {
 function showModalWithCards(title, cardIds) {
     document.getElementById("card-modal-title").innerText = title;
     const container = document.getElementById("card-modal-content"); container.innerHTML = "";
-    
     if (!cardIds || cardIds.length === 0) { container.innerHTML = "<p style='color: white;'>Zatím prázdné...</p>"; } 
     else {
         cardIds.forEach(cardId => {
@@ -478,20 +422,13 @@ function renderHand() {
 }
 
 function toggleUI(state) {
-    // 1. Zaručíme, že se hlavní herní screen bezpečně schová nebo ukáže
-    let gameScreen = document.getElementById("game-screen");
-    if (gameScreen) {
-        if (state === "none") {
-            hideElement("game-screen");
-        } else {
-            showElement("game-screen");
-        }
-    }
+    console.log(`🎛️ Přepínám UI na stav: ${state}`);
+    
+    // Nejprve se ujistíme, že herní obrazovka je stoprocentně vidět
+    showElement("game-screen");
 
-    // 2. Schováme všechna podokna
     ["battle-hud", "hand-wrapper", "map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(hideElement);
     
-    // 3. Ukážeme jen to, co má hráč aktuálně vidět
     if (state === "battle") { showElement("battle-hud"); showElement("hand-wrapper"); } 
     else if (state === "map") { showElement("map-container"); } 
     else if (state === "reward") { showElement("reward-screen"); } 
@@ -500,20 +437,12 @@ function toggleUI(state) {
     else if (state === "rest") { showElement("rest-screen"); }
 }
 
-// --- VYLEPŠENÁ MAPA S IKONAMI A HLASOVÁNÍM ---
-// --- VYLEPŠENÁ MAPA S IKONAMI A HLASOVÁNÍM ---
+// --- SILNĚ VYLEPŠENÁ MAPA (S DETAILNÍM LOGOVÁNÍM) ---
 function renderMap() {
+    console.log("🗺️ Funkce renderMap() spuštěna!");
+    
     const mapContainer = document.getElementById("nodes-list"); 
-    if (!mapContainer) {
-        console.warn("⚠️ Kontejner pro mapu (nodes-list) nebyl nalezen!");
-        return;
-    }
-
-    if (gameMap.length === 0) {
-        console.warn("⚠️ Mapa je prázdná! Není co vykreslovat.");
-        mapContainer.innerHTML = "<p style='color: white;'>Mapa je prázdná...</p>";
-        return;
-    }
+    if (!mapContainer) { console.error("❌ CHYBA: Kontejner nodes-list nebyl v HTML nalezen!"); return; }
 
     mapContainer.innerHTML = ""; 
     mapContainer.style.position = "relative"; 
@@ -522,22 +451,34 @@ function renderMap() {
     mapContainer.style.gap = "50px"; 
     mapContainer.style.padding = "20px";
 
-    let currentNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId);
-    let validNextNodeIds = currentNode ? safeGet(currentNode, 'connectedTo', 'ConnectedTo') : [];
-    if (!validNextNodeIds) validNextNodeIds = [];
+    if (!gameMap || gameMap.length === 0) { console.warn("⚠️ gameMap je prázdná!"); return; }
 
-    // Ochrana před chybou při prázdném poli pater
-    let floorValues = gameMap.map(n => safeGet(n, 'floor', 'Floor') || 0);
+    let currentNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId);
+    let validNextNodeIds = currentNode ? (safeGet(currentNode, 'connectedTo', 'ConnectedTo') || []) : [];
+
+    // Bezpečný výpočet max patra
+    let floorValues = gameMap.map(n => {
+        let f = safeGet(n, 'floor', 'Floor');
+        return (typeof f === "number") ? f : 0;
+    });
     const maxFloor = floorValues.length > 0 ? Math.max(...floorValues) : 0;
-    
+    console.log(`⬆️ Max patro je: ${maxFloor}`);
+
+    let vykreslenoUzlu = 0;
+
     for (let f = 0; f <= maxFloor; f++) {
-        const floorNodes = gameMap.filter(n => safeGet(n, 'floor', 'Floor') === f);
-        if (floorNodes.length === 0) continue; // Přeskočíme prázdná patra
+        const floorNodes = gameMap.filter(n => {
+            let nf = safeGet(n, 'floor', 'Floor');
+            return (typeof nf === "number" ? nf : 0) === f;
+        });
+        
+        if (floorNodes.length === 0) continue;
 
         const row = document.createElement("div");
         row.style.display = "flex"; row.style.justifyContent = "center"; row.style.gap = "80px"; row.style.zIndex = "2"; 
         
         floorNodes.forEach(node => {
+            vykreslenoUzlu++;
             const btnWrapper = document.createElement("div"); btnWrapper.style.position = "relative"; 
             const btn = document.createElement("button"); 
             let nodeId = safeGet(node, 'id', 'Id'); let nodeFloor = safeGet(node, 'floor', 'Floor'); let nodeType = getTypeString(safeGet(node, 'type', 'Type')); let isCompleted = safeGet(node, 'isCompleted', 'IsCompleted');
@@ -570,11 +511,9 @@ function renderMap() {
                 btn.style.boxShadow = "0 0 20px #f1c40f"; btn.style.borderColor = "#f1c40f";
             }
 
-            if (isCompleted) {
-                btn.style.backgroundColor = "#7f8c8d"; btn.style.opacity = "0.5"; btn.disabled = true;
-            } else if (myCurrentNodeId === nodeId) {
-                btn.style.backgroundColor = "#f39c12"; btn.style.borderColor = "white"; btn.style.transform = "scale(1.1)"; btn.disabled = true;
-            } else if (isClickable) {
+            if (isCompleted) { btn.style.backgroundColor = "#7f8c8d"; btn.style.opacity = "0.5"; btn.disabled = true; } 
+            else if (myCurrentNodeId === nodeId) { btn.style.backgroundColor = "#f39c12"; btn.style.borderColor = "white"; btn.style.transform = "scale(1.1)"; btn.disabled = true; } 
+            else if (isClickable) {
                 btn.style.backgroundColor = "#2ecc71"; btn.style.cursor = "pointer";
                 if(votesForThisNode.length === 0) btn.style.boxShadow = "0 0 10px rgba(46, 204, 113, 0.5)";
                 btn.onmouseover = () => { btn.style.transform = "scale(1.2)"; btn.style.backgroundColor = "#27ae60"; };
@@ -588,6 +527,8 @@ function renderMap() {
         });
         mapContainer.appendChild(row);
     }
+    
+    console.log(`✅ Mapování dokončeno. Do HTML bylo vloženo ${vykreslenoUzlu} tlačítek.`);
     setTimeout(() => drawMapLines(mapContainer), 100);
 }
 
