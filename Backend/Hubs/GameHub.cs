@@ -100,9 +100,10 @@ namespace RoguelikeCardGame.Hubs
                         room.TeamRelics.Add(new Relic(template.StartingRelic.Id, $"{template.StartingRelic.Name} ({player.Name})", template.StartingRelic.Description));
                     }
 
+                    // ÚPRAVA: Zasíláme DrawPile a DiscardPile (celé seznamy) a StartingDeck!
                     await Clients.Client(player.ConnectionId).SendAsync("ReceiveInitialState", 
                         player.Hand, player.Mana, CardDatabase.Cards, player.Gold, 
-                        player.DrawPile.Count, player.DiscardPile.Count, player.Hp, player.MaxHp, player.Block);
+                        player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, player.StartingDeck);
                 }
                 await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
                 await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
@@ -110,16 +111,13 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // --- NOVÉ: HLASOVÁNÍ O POSTUPU ---
         public async Task VoteNextNode(string roomName, string playerName, int nodeId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
             {
-                // Uložíme hlas hráče
                 room.MapVotes[playerName] = nodeId;
                 await Clients.Group(roomName).SendAsync("UpdateMapVotes", room.MapVotes);
 
-                // Kontrola majority (Nadpoloviční většina)
                 int requiredVotes = (int)Math.Floor(room.Players.Count / 2.0) + 1;
                 
                 var voteCounts = room.MapVotes.GroupBy(v => v.Value).Select(g => new { NodeId = g.Key, Count = g.Count() });
@@ -127,13 +125,12 @@ namespace RoguelikeCardGame.Hubs
 
                 if (winningNode != null)
                 {
-                    room.MapVotes.Clear(); // Zrušíme hlasování
-                    await MoveToNextNode(roomName, winningNode.NodeId); // Jdeme dál!
+                    room.MapVotes.Clear(); 
+                    await MoveToNextNode(roomName, winningNode.NodeId); 
                 }
             }
         }
 
-        // Metoda nyní slouží jen jako prováděcí orgán po vyhodnocení hlasů
         private async Task MoveToNextNode(string roomName, int nodeId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
@@ -151,6 +148,16 @@ namespace RoguelikeCardGame.Hubs
                 room.CurrentNodeId = nodeId;
                 var enemyList = new List<ActiveEnemy>();
                 
+                // --- PŘÍPRAVA HRÁČŮ NA DALŠÍ KROK (Důležité pro nebojová pole) ---
+                foreach (var p in room.Players)
+                {
+                    p.Mana = p.MaxMana;
+                    p.Block = 0;
+                    p.DiscardPile.AddRange(p.Hand);
+                    p.Hand.Clear();
+                    p.DrawCards(5);
+                }
+
                 if (targetNode.Type == NodeType.Encounter || targetNode.Type == NodeType.EliteEncounter || targetNode.Type == NodeType.Boss)
                 {
                     Random rng = new Random();
@@ -168,17 +175,34 @@ namespace RoguelikeCardGame.Hubs
                     }
 
                     _roomEnemies[roomName] = enemyList;
+                    
+                    // Pošleme stav nepřátel i nový stav ruky hráčům
+                    foreach (var p in room.Players)
+                    {
+                        await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", 
+                            p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, enemyList);
+                    }
                     await Clients.Group(roomName).SendAsync("EnteredNode", targetNode.Type.ToString(), targetNode, enemyList);
                 }
                 else
                 {
+                    // RestPlace, Shop, Treasure, Event
                     targetNode.IsCompleted = true;
+                    
+                    // I zde musíme poslat hráčům nové karty, aby je viděli, až na políčko vstoupí
+                    foreach (var p in room.Players)
+                    {
+                        await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", 
+                            p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, new List<ActiveEnemy>());
+                    }
                     await Clients.Group(roomName).SendAsync("EnteredNode", targetNode.Type.ToString(), targetNode, new List<ActiveEnemy>());
                 }
+                
+                // Aktualizace statistik týmu (pro jistotu)
+                await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
             }
         }
 
-        // NOVÉ: Přidán argument "targetEnemyId"
         public async Task SelectCard(string roomName, string playerName, string cardId, int karmaShift, int damage, string targetEnemyId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
@@ -210,7 +234,6 @@ namespace RoguelikeCardGame.Hubs
                     var summary = new List<string>();
                     var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
 
-                    // NOVÁ LOGIKA VYHODNOCENÍ - Cílené útoky
                     foreach (var kvp in room.PlayedCardsThisTurn)
                     {
                         var player = room.Players.FirstOrDefault(p => p.Name == kvp.Key);
@@ -226,7 +249,6 @@ namespace RoguelikeCardGame.Hubs
                                 if (player.Hp > player.MaxHp) player.Hp = player.MaxHp;
                             }
 
-                            // APLIKACE POŠKOZENÍ NA CÍL
                             if (card.Damage > 0)
                             {
                                 double damageMultiplier = 1.0;
@@ -235,10 +257,7 @@ namespace RoguelikeCardGame.Hubs
 
                                 int actualDamage = (int)Math.Round(card.Damage * damageMultiplier);
                                 
-                                // Najdeme vybraný cíl, který ještě žije
                                 var target = enemies.FirstOrDefault(e => e.Id == card.TargetEnemyId && e.Hp > 0);
-                                
-                                // Pokud je cíl mrtvý, útok se automaticky přesměruje na prvního živého
                                 if (target == null) target = enemies.FirstOrDefault(e => e.Hp > 0);
 
                                 if (target != null)
@@ -260,7 +279,6 @@ namespace RoguelikeCardGame.Hubs
                     room.CurrentKarma += totalKarmaShift;
                     bool allDead = enemies.Count > 0 && enemies.All(e => e.Hp <= 0);
 
-                    // TAH PŘEŽIVŠÍCH NEPŘÁTEL
                     if (!allDead && enemies.Count > 0)
                     {
                         summary.Add($"--- TAH NEPŘÁTEL ---");
@@ -347,8 +365,9 @@ namespace RoguelikeCardGame.Hubs
                             p.Hand.Clear();
                             p.DrawCards(5);
 
+                            // ÚPRAVA: Zasíláme DrawPile a DiscardPile místo Countů
                             await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", 
-                                p.Hand, p.Mana, p.Gold, p.DrawPile.Count, p.DiscardPile.Count, p.Hp, p.MaxHp, p.Block, enemies);
+                                p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, enemies);
                         }
                     }
                 }
@@ -374,9 +393,10 @@ namespace RoguelikeCardGame.Hubs
                         await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
                     }
 
-                    await Clients.Client(player.ConnectionId).SendAsync("RewardClaimed");
+                    // ÚPRAVA: Zašle hráči jeho aktualizovaný balíček
+                    await Clients.Client(player.ConnectionId).SendAsync("RewardClaimed", player.StartingDeck);
                 }
             }
         }
     }
-}   
+}
