@@ -45,7 +45,7 @@ namespace RoguelikeCardGame.Models
         
         // --- EKONOMIKA A POSTUP ---
         public int TeamGold { get; set; } = 50; // Společná pokladna
-        public List<string> TeamRelics { get; set; } = new List<string>(); // Získané relikvie
+        public List<Relic> TeamRelics { get; set; } = new List<Relic>();
         
         // Mapa a aktuální pozice
         public List<MapNode> Map { get; set; } = new List<MapNode>();

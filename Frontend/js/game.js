@@ -91,7 +91,29 @@ connection.on("GameStarted", (roomName, initialMap) => {
 });
 
 connection.on("UpdateRelics", (relicsList) => {
-    document.getElementById("relics-list").innerText = relicsList.length > 0 ? relicsList.join(" | ") : "Zatím žádné";
+    const relicsContainer = document.getElementById("relics-list");
+    relicsContainer.innerHTML = ""; // Vyčistíme text
+    
+    if (relicsList.length === 0) {
+        relicsContainer.innerText = "Zatím žádné";
+        return;
+    }
+    
+    // Projdeme všechny relikvie ze serveru
+    relicsList.forEach(relic => {
+        const span = document.createElement("span");
+        span.innerText = `[${relic.name}] `;
+        
+        // Zde je to kouzlo: title vytvoří nativní tooltip při najetí myší!
+        span.title = relic.description; 
+        
+        // Přidáme trošku stylu, aby hráč věděl, že na to má najet myší
+        span.style.cursor = "help";
+        span.style.borderBottom = "2px dotted #2c3e50";
+        span.style.marginRight = "10px";
+        
+        relicsContainer.appendChild(span);
+    });
 });
 
 // --- 3. BITEVNÍ SYSTÉM ---

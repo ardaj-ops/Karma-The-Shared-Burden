@@ -98,9 +98,15 @@ namespace RoguelikeCardGame.Hubs
                     player.DrawCards(5);
 
                     if (HeroDatabase.Heroes.TryGetValue(player.HeroClass, out var template) && template.StartingRelic != null)
-                    {
-                        room.TeamRelics.Add($"{template.StartingRelic.Name} (od {player.Name})");
-                    }
+{
+    // Vytvoříme kopii relikvie a do názvu přidáme jméno hráče
+    var myRelic = new Relic(
+        template.StartingRelic.Id, 
+        $"{template.StartingRelic.Name} ({player.Name})", 
+        template.StartingRelic.Description
+    );
+    room.TeamRelics.Add(myRelic);
+}
 
                     // Posíláme peníze a velikost balíčků!
                     await Clients.Client(player.ConnectionId).SendAsync("ReceiveInitialState", player.Hand, player.Mana, CardDatabase.Cards, player.Gold, player.DrawPile.Count, player.DiscardPile.Count);
