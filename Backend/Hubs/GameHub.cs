@@ -8,7 +8,6 @@ using System;
 
 namespace RoguelikeCardGame.Hubs
 {
-    // Objekt reprezentující fyzického nepřítele v aktuální místnosti
     public class ActiveEnemy
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -22,8 +21,18 @@ namespace RoguelikeCardGame.Hubs
     public class GameHub : Hub
     {
         private static ConcurrentDictionary<string, GameRoom> _activeRooms = new ConcurrentDictionary<string, GameRoom>();
-        // Zde držíme seznam vygenerovaných nepřátel pro každou místnost
         private static ConcurrentDictionary<string, List<ActiveEnemy>> _roomEnemies = new ConcurrentDictionary<string, List<ActiveEnemy>>();
+
+        // NOVÁ POMOCNÁ METODA: Sbírá HP a Štíty celého týmu a balí je do JSON listu
+        private object GetTeamStats(GameRoom room)
+        {
+            return room.Players.Select(p => new {
+                name = p.Name,
+                hp = p.Hp,
+                maxHp = p.MaxHp,
+                block = p.Block
+            }).ToList();
+        }
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
@@ -102,6 +111,10 @@ namespace RoguelikeCardGame.Hubs
                 }
 
                 await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
+                
+                // NOVÉ ODESLÁNÍ STAVU TÝMU PŘI STARTU
+                await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                
                 await Clients.Group(roomName).SendAsync("GameStarted", roomName, room.Map);
             }
         }
@@ -114,8 +127,6 @@ namespace RoguelikeCardGame.Hubs
                 if (nextNode != null)
                 {
                     room.CurrentNodeId = nodeId;
-
-                    // --- LOSOVÁNÍ SKUPINY NEPŘÁTEL (Zohledňuje aktuální Act) ---
                     var enemyList = new List<ActiveEnemy>();
                     
                     if (nextNode.Type == NodeType.Encounter || nextNode.Type == NodeType.EliteEncounter || nextNode.Type == NodeType.Boss)
@@ -123,8 +134,8 @@ namespace RoguelikeCardGame.Hubs
                         Random rng = new Random();
                         int enemyCount = 1;
 
-                        if (nextNode.Type == NodeType.Encounter) enemyCount = rng.Next(1, 5); // 1-4 běžní
-                        else if (nextNode.Type == NodeType.EliteEncounter) enemyCount = rng.Next(1, 3); // 1-2 elity
+                        if (nextNode.Type == NodeType.Encounter) enemyCount = rng.Next(1, 5); 
+                        else if (nextNode.Type == NodeType.EliteEncounter) enemyCount = rng.Next(1, 3); 
                         
                         string tier = nextNode.Type == NodeType.Boss ? "Boss" : (nextNode.Type == NodeType.EliteEncounter ? "Elite" : "Normal");
 
@@ -147,7 +158,6 @@ namespace RoguelikeCardGame.Hubs
                     }
                     else
                     {
-                        // Pokud stoupl na Poklad / Odpočinek
                         await Clients.Group(roomName).SendAsync("EnteredNode", nextNode.Type.ToString(), nextNode, new List<ActiveEnemy>());
                     }
                 }
@@ -202,7 +212,6 @@ namespace RoguelikeCardGame.Hubs
                         }
                     }
 
-                    // APLIKACE KARMY NA POŠKOZENÍ
                     double damageMultiplier = 1.0;
                     if (room.CurrentKarma >= 10) { damageMultiplier = 0.8; summary.Add("Čisté Světlo snižuje poškození o 20 %."); }
                     else if (room.CurrentKarma <= -10) { damageMultiplier = 1.3; summary.Add("Hluboká Temnota zvyšuje poškození o 30 %!"); }
@@ -210,7 +219,6 @@ namespace RoguelikeCardGame.Hubs
                     int actualDamage = (int)Math.Round(baseTotalDamage * damageMultiplier);
                     room.CurrentKarma += totalKarmaShift;
 
-                    // PRŮRAZNÉ POŠKOZENÍ
                     var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
                     int remainingDamage = actualDamage;
 
@@ -233,7 +241,6 @@ namespace RoguelikeCardGame.Hubs
                     
                     bool allDead = enemies.All(e => e.Hp <= 0);
 
-                    // TAH PŘEŽIVŠÍCH NEPŘÁTEL
                     if (!allDead)
                     {
                         summary.Add($"--- TAH NEPŘÁTEL ---");
@@ -264,10 +271,12 @@ namespace RoguelikeCardGame.Hubs
 
                     room.PlayedCardsThisTurn.Clear();
                     room.PlayersReady.Clear();
-
+                    
+                    // NOVÉ: Rozešleme aktualizované stavy životů všech hráčů po vyhodnocení
+                    await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                    
                     await Clients.Group(roomName).SendAsync("TurnResolved", summary, actualDamage, room.CurrentKarma, enemies);
                     
-                    // --- VYHODNOCENÍ KONCE BOJE A ODMĚNY ---
                     if (allDead)
                     {
                         var currentNode = room.Map.FirstOrDefault(n => n.Id == room.CurrentNodeId);
@@ -275,27 +284,22 @@ namespace RoguelikeCardGame.Hubs
                         {
                             currentNode.IsCompleted = true;
                             
-                            // Vygenerujeme odměny pro každého hráče
                             Random rng = new Random();
                             var allCards = CardDatabase.Cards.Values.ToList();
 
                             foreach (var p in room.Players)
                             {
-                                // Každému hráči pošleme 3 náhodné karty na výběr
                                 var cardChoices = allCards.OrderBy(x => rng.Next()).Take(3).ToList();
                                 
-                                Relic? relicChoice = null;
+                                Relic? relicChoice = null; // Zde jsme prve opravovali CS8600 přidáním otazníku
                                 if (currentNode.Type == NodeType.EliteEncounter || currentNode.Type == NodeType.Boss)
                                 {
-                                    // Hráči dostanou i Relikvii
                                     relicChoice = RelicDatabase.GetRandomRelic();
                                 }
 
-                                // Odeslání okna s odměnami do klienta
                                 await Clients.Client(p.ConnectionId).SendAsync("ShowRewardScreen", cardChoices, relicChoice);
                             }
 
-                            // Posun mezi akty se řeší pro Bosse
                             if (currentNode.Type == NodeType.Boss)
                             {
                                 if (room.CurrentAct == 1)
@@ -342,7 +346,6 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // --- ZPRACOVÁNÍ VÝBĚRU ODMĚNY ---
         public async Task ClaimReward(string roomName, string playerName, string cardId, string relicId, string relicName, string relicDesc)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
@@ -352,19 +355,16 @@ namespace RoguelikeCardGame.Hubs
                 {
                     if (!string.IsNullOrEmpty(cardId))
                     {
-                        // Vybraná karta jde do balíčku
                         player.StartingDeck.Add(cardId);
                         player.DrawPile.Add(cardId); 
                     }
 
                     if (!string.IsNullOrEmpty(relicId))
                     {
-                        // Vybraná relikvie se zapíše pro celý tým
                         room.TeamRelics.Add(new Relic(relicId, $"{relicName} ({player.Name})", relicDesc));
                         await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
                     }
 
-                    // Hotovo, hráč se může vrátit na mapu
                     await Clients.Client(player.ConnectionId).SendAsync("RewardClaimed");
                 }
             }

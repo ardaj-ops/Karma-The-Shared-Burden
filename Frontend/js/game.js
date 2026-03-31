@@ -114,6 +114,11 @@ connection.on("UpdateRelics", (relicsList) => {
     });
 });
 
+// NOVÉ: Přijímání stavů všech hráčů z týmu
+connection.on("UpdateTeamStats", (teamData) => {
+    renderTeam(teamData);
+});
+
 // --- 3. BITEVNÍ SYSTÉM (Více nepřátel) ---
 connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawCount, discardCount, hp, maxHp, block) => {
     cardDatabase = serverCards; 
@@ -139,7 +144,6 @@ connection.on("PlayerReadyLog", (player, readyCount, totalPlayers) => {
     logMessage(`✅ ${player} ukončil tah. (${readyCount}/${totalPlayers})`);
 });
 
-// UPRAVENO PRO SKUPINU NEPŘÁTEL
 connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => {
     logMessage(`--- TAH VYHODNOCEN ---`);
     logMessage(`💥 Uštědřili jste ${totalDamage} plošného DMG!`);
@@ -148,7 +152,6 @@ connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => 
     updateKarmaUI(newKarma);
 });
 
-// UPRAVENO PRO SKUPINU NEPŘÁTEL
 connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawCount, discardCount, hp, maxHp, block, enemiesArray) => {
     myHand = updatedHand;
     myMana = updatedMana;
@@ -170,7 +173,6 @@ connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, dra
     renderHand(); 
 });
 
-// UPRAVENO PRO SKUPINU NEPŘÁTEL
 connection.on("EnteredNode", (nodeType, nodeData, enemiesArray) => {
     logMessage(`📍 Vstupujete do: ${nodeType}`);
     
@@ -244,7 +246,7 @@ function endTurn() {
         .catch(err => console.error(err));
 }
 
-// --- NOVÉ: SYSTÉM ODMĚN ---
+// --- SYSTÉM ODMĚN ---
 let currentRelicReward = null; 
 
 connection.on("ShowRewardScreen", (cardChoices, relicChoice) => {
@@ -311,6 +313,35 @@ function skipReward() {
 }
 
 // --- 5. VYKRESLOVÁNÍ UI ---
+
+// NOVÉ: Vykreslení celého týmu
+function renderTeam(teamData) {
+    const container = document.getElementById("team-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    teamData.forEach(player => {
+        const isMe = player.name === playerName;
+        const div = document.createElement("div");
+        
+        // Zelená pro tebe, modrá pro ostatní spoluhráče
+        div.style.background = isMe ? "#27ae60" : "#2980b9";
+        div.style.color = "white";
+        div.style.padding = "8px 15px";
+        div.style.borderRadius = "5px";
+        div.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)";
+        div.style.textAlign = "center";
+        div.style.minWidth = "120px";
+
+        div.innerHTML = `
+            <div style="font-weight: bold; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 5px;">${player.name}</div>
+            <div style="font-size: 14px;">❤️ ${player.hp} / ${player.maxHp}</div>
+            <div style="font-size: 14px; color: #ecf0f1;">🛡️ Blok: ${player.block}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
 function renderEnemies(enemiesArray) {
     const container = document.getElementById("enemies-container");
     if (!container) return;

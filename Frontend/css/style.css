@@ -1,20 +1,213 @@
+/* =========================================
+   ZÁKLADNÍ NASTAVENÍ A TYPOGRAFIE
+========================================= */
 body { 
-    font-family: Arial, sans-serif; 
-    background-color: #2c3e50; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background-color: #1e272e; /* Trochu tmavší, atmosféričtější pozadí */
     color: white; 
     text-align: center; 
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
 }
+
+/* Vlastní hezčí scrollbar pro log a celou stránku */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #2c3e50; 
+}
+::-webkit-scrollbar-thumb {
+    background: #8e44ad; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #9b59b6; 
+}
+
+/* =========================================
+   ANIMACE (KEYFRAMES)
+========================================= */
+/* Animace jemného vznášení (pro postavy a nepřátele) */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
+}
+
+/* Pulzování aktivních bodů na mapě */
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+
+/* Plynulé zobrazení nových UI prvků */
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Animace nových zpráv v logu */
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* =========================================
+   UI KONTEJNERY (Herní okna)
+========================================= */
+#battle-hud, #map-container, #reward-screen, #hand-wrapper, #team-container {
+    animation: fadeInScale 0.4s ease-out forwards;
+}
+
+/* =========================================
+   KARTY A JEJICH EFEKTY
+========================================= */
 .card { 
-    display: inline-block; width: 100px; height: 150px; 
-    background-color: #ecf0f1; color: #2c3e50; 
-    margin: 10px; border-radius: 8px; cursor: pointer;
-    box-shadow: 2px 2px 10px rgba(0,0,0,0.5); transition: transform 0.2s;
+    display: inline-block; 
+    transition: all 0.2s ease-out;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
 }
-.card:hover { transform: translateY(-10px); }
-#karma-bar { 
-    width: 80%; height: 30px; 
-    background: linear-gradient(to right, #f1c40f, #8e44ad); 
-    margin: 20px auto; border: 2px solid white;
-    line-height: 30px; font-weight: bold;
+
+.card:hover { 
+    transform: translateY(-15px) scale(1.05) !important; 
+    box-shadow: 0 12px 24px rgba(0,0,0,0.6) !important;
+    z-index: 10;
 }
-#log { list-style-type: none; padding: 0; max-width: 600px; margin: 0 auto; text-align: left; }
+
+/* Jemný lesk po najetí na kartu */
+.card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 50%; height: 100%;
+    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+    transform: skewX(-25deg);
+    transition: 0.5s;
+}
+.card:hover::after {
+    left: 150%;
+}
+
+/* =========================================
+   TÝM (SPOLUHRÁČI)
+========================================= */
+#team-container > div {
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255,255,255,0.1);
+    /* Přidáme jemné dýchání hrdinům */
+    animation: float 4s ease-in-out infinite;
+}
+
+#team-container > div:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.5) !important;
+    border-color: rgba(255,255,255,0.5);
+}
+
+/* =========================================
+   NEPŘÁTELÉ (BATTLE HUD)
+========================================= */
+#enemies-container > div {
+    transition: all 0.3s ease;
+    border: 2px solid #e74c3c;
+    /* Rychlejší a agresivnější vznášení pro nepřátele */
+    animation: float 2.5s ease-in-out infinite alternate;
+}
+
+/* Každý další nepřítel se vznáší trochu jinak (aby neskákali všichni stejně) */
+#enemies-container > div:nth-child(even) {
+    animation-delay: 0.5s;
+    animation-duration: 3s;
+}
+#enemies-container > div:nth-child(3n) {
+    animation-delay: 1s;
+    animation-duration: 2.2s;
+}
+
+#enemies-container > div:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.8) !important;
+    border-color: #ff7675;
+}
+
+/* =========================================
+   MAPA A UZLY
+========================================= */
+#nodes-list button {
+    position: relative;
+    transition: all 0.3s ease !important;
+}
+
+/* Tlačítka, na která LZE kliknout (nejsou hotová) */
+#nodes-list button:not([disabled]) {
+    animation: pulse-green 2s infinite; /* Pulzování */
+}
+
+#nodes-list button:not([disabled]):hover {
+    transform: scale(1.15) !important;
+    box-shadow: 0 0 20px #2ecc71 !important;
+    z-index: 5;
+}
+
+/* Uzly, které už jsou hotové (šedé) */
+#nodes-list button[disabled] {
+    opacity: 0.6;
+    filter: grayscale(100%);
+}
+
+/* Šipky mezi uzly na mapě */
+#nodes-list div {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+/* =========================================
+   LIŠTY (KARMA, MANA, ZLATO)
+========================================= */
+#karma-bar {
+    transition: all 0.5s ease;
+}
+
+/* Tlačítka hrdinů v Lobby */
+.hero-btn { 
+    padding: 10px 20px; 
+    font-size: 16px; 
+    background: #34495e; 
+    color: white; 
+    border: 2px solid transparent; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
+.hero-btn:hover { 
+    background: #1abc9c; 
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(26, 188, 156, 0.4);
+}
+
+/* =========================================
+   LOGOVACÍ OKNO (HISTORIE UDÁLOSTÍ)
+========================================= */
+#log { 
+    list-style-type: none; 
+    padding: 15px; 
+    margin: 0; 
+    text-align: left; 
+    background: #2c3e50 !important; /* Tmavé pozadí pro log */
+    color: #ecf0f1 !important;
+    border: 1px solid #34495e !important;
+}
+
+#log li {
+    padding: 8px 0;
+    border-bottom: 1px dashed #34495e;
+    animation: slideInLeft 0.3s ease-out forwards;
+    font-size: 14px;
+}
+
+#log li:last-child {
+    border-bottom: none;
+}

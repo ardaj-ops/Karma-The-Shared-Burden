@@ -1,11 +1,19 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karma: The Shared Burden</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 <body>
-    <h1 style="text-align: center; color: white;">Karma: The Shared Burden</h1>
+    <h1 style="text-align: center; color: white; margin-top: 20px;">Karma: The Shared Burden</h1>
     
     <div id="lobby-screen" style="width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
         <h2>Vítejte v krčmě!</h2>
         
-        <input type="text" id="player-name-input" placeholder="Tvé jméno..." style="padding: 10px; font-size: 16px; margin: 10px; width: 30%;">
-        <input type="text" id="room-name-input" placeholder="Název místnosti (např. MojeHra123)" style="padding: 10px; font-size: 16px; margin: 10px; width: 30%;">
+        <input type="text" id="player-name-input" placeholder="Tvé jméno..." style="padding: 10px; font-size: 16px; margin: 10px; width: 30%; border: 1px solid #bdc3c7; border-radius: 5px;">
+        <input type="text" id="room-name-input" placeholder="Název místnosti (např. MojeHra123)" style="padding: 10px; font-size: 16px; margin: 10px; width: 30%; border: 1px solid #bdc3c7; border-radius: 5px;">
         
         <h3 style="margin-top: 20px;">1. Vyber si hrdinu:</h3>
         <p>Aktuálně vybráno: <strong id="selected-hero-text" style="color: #e74c3c;">Nikdo</strong></p>
@@ -22,8 +30,8 @@
         </div>
 
         <h3>2. Vstup do hry:</h3>
-        <button onclick="createLobby()" style="padding: 15px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">➕ Vytvořit Místnost</button>
-        <button onclick="joinLobby()" style="padding: 15px 30px; font-size: 18px; background: #2980b9; color: white; border: none; border-radius: 5px; cursor: pointer;">Přípojit do Místnosti</button>
+        <button onclick="createLobby()" style="padding: 15px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; transition: background 0.3s;" onmouseover="this.style.background='#2ecc71'" onmouseout="this.style.background='#27ae60'">➕ Vytvořit Místnost</button>
+        <button onclick="joinLobby()" style="padding: 15px 30px; font-size: 18px; background: #2980b9; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#3498db'" onmouseout="this.style.background='#2980b9'">Připojit do Místnosti</button>
     </div>
 
     <div id="waiting-screen" style="display: none; width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px;">
@@ -31,77 +39,63 @@
         <h3>Hráči v lobby:</h3>
         <ul id="lobby-players-list" style="list-style: none; padding: 0; font-size: 18px;"></ul>
         <button id="start-game-btn" onclick="startGame()" style="display: none; padding: 15px 30px; font-size: 18px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;">🚀 Spustit Hru!</button>
-        <p id="waiting-text" style="margin-top: 20px; font-style: italic;">Čekáme na zakladatele, až hru odstartuje...</p>
+        <p id="waiting-text" style="margin-top: 20px; font-style: italic; color: #7f8c8d;">Čekáme na zakladatele, až hru odstartuje...</p>
     </div>
 
     <div id="game-screen" style="display: none;">
         
-        <div style="width: 80%; margin: 10px auto; text-align: center; background: #f1c40f; color: #2c3e50; padding: 10px; border-radius: 5px; font-weight: bold;">
+        <div style="width: 80%; margin: 10px auto; text-align: center; background: #f1c40f; color: #2c3e50; padding: 10px; border-radius: 5px; font-weight: bold; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
             🏆 Týmové Relikvie: <span id="relics-list">Zatím žádné</span>
         </div>
 
-        <div id="battle-hud">
-    <div id="enemies-container" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
-        </div>
-    <div id="reward-screen" style="display: none; text-align: center; color: white; margin-top: 20px;">
-    <h2 style="color: #f1c40f;">🎉 Vítězství! Získáváš kořist:</h2>
-    
-    <div id="relic-reward-container" style="margin: 20px auto; padding: 15px; background: rgba(241, 196, 15, 0.2); border: 2px dashed #f1c40f; border-radius: 8px; width: 60%; display: none;">
-        <h3>🏆 Získáváš Relikvii:</h3>
-        <strong id="reward-relic-name" style="font-size: 20px;">Neznámá relikvie</strong>
-        <p id="reward-relic-desc"></p>
-    </div>
-
-    <h3>Vyber si 1 kartu do svého balíčku:</h3>
-    <div id="card-reward-container" style="display: flex; justify-content: center; gap: 15px; margin-top: 20px;">
-        </div>
-    
-    <button onclick="skipReward()" style="margin-top: 30px; padding: 10px 20px; background: #95a5a6; border: none; color: white; cursor: pointer; border-radius: 5px;">Přeskočit odměnu</button>
-</div>
-    <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto;">
-        <div id="karma-bar">Společná Karma: <strong id="karma-value">0</strong> <span id="karma-status"> (Rovnováha ⚖️)</span></div>
-        <div id="mana-bar" style="color: #3498db;">Tvoje Mana: <strong id="mana-value">0</strong> / 3</div>
-        <div id="gold-bar" style="color: #f1c40f;">Zlaťáky: <strong id="gold-value">0</strong> 💰</div>
-    </div>
-
-    <div style="display: flex; justify-content: space-around; background: #27ae60; color: white; padding: 10px; border-radius: 5px; width: 60%; margin: 10px auto;">
-        <div>❤️ Tvé HP: <strong id="hero-hp">0</strong> / <span id="hero-max-hp">0</span></div>
-        <div style="color: #ecf0f1;">🛡️ Tvůj Blok: <strong id="hero-block">0</strong></div>
-    </div>
-</div>
-            
-            <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto;">
-                <div id="karma-bar">Společná Karma: <span id="karma-value">0</span></div>
-                <div id="mana-bar">Tvoje Mana: <span id="mana-value">0</span> / 3</div>
+        <div id="team-container" style="display: flex; justify-content: center; gap: 15px; margin: 10px auto; width: 80%; flex-wrap: wrap;">
             </div>
-        </div>
 
-        <div id="map-container" style="display: none; background: #34495e; color: white; padding: 20px; border-radius: 5px; margin: 20px auto; width: 80%; text-align: center;">
+        <div id="map-container" style="display: none; background: #34495e; color: white; padding: 20px; border-radius: 5px; margin: 20px auto; width: 80%; text-align: center; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
             <h2>Mapa postupu</h2>
             <div id="nodes-list" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 15px;"></div>
         </div>
-        <div style="display: flex; justify-content: space-between; width: 60%; margin: 10px auto; color: white; font-weight: bold; font-size: 16px; background: #34495e; padding: 10px; border-radius: 5px;">
-    <div id="deck-count">🎴 V balíčku: ?</div>
-    <div id="discard-count">🗑️ Odhozeno: ?</div>
-</div>
-        <div id="hand-wrapper" style="width: 80%; margin: 20px auto; text-align: center;">
-            <h2 id="hand-title">Tvoje ruka</h2>
-            <div id="hand-container" style="display: flex; gap: 10px; padding: 15px; justify-content: center; min-height: 120px; background: #ecf0f1; border-radius: 5px; flex-wrap: wrap;"></div>
+
+        <div id="battle-hud" style="display: none;">
+            <div id="enemies-container" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;"></div>
             
-            <button id="end-turn-btn" onclick="endTurn()" style="margin-top: 20px; padding: 15px 40px; font-size: 20px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer;">⌛ Ukončit tah</button>
+            <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto; box-sizing: border-box; border: 1px solid #34495e;">
+                <div id="karma-bar">Společná Karma: <strong id="karma-value">0</strong> <span id="karma-status"> (Rovnováha ⚖️)</span></div>
+                <div id="mana-bar" style="color: #3498db;">Tvoje Mana: <strong id="mana-value">0</strong> / 3</div>
+                <div id="gold-bar" style="color: #f1c40f;">Zlaťáky: <strong id="gold-value">0</strong> 💰</div>
+            </div>
+        </div>
+
+        <div id="reward-screen" style="display: none; text-align: center; color: white; margin-top: 20px;">
+            <h2 style="color: #f1c40f;">🎉 Vítězství! Získáváš kořist:</h2>
+            <div id="relic-reward-container" style="margin: 20px auto; padding: 15px; background: rgba(241, 196, 15, 0.2); border: 2px dashed #f1c40f; border-radius: 8px; width: 60%; display: none;">
+                <h3 style="margin-top: 0;">🏆 Získáváš Relikvii:</h3>
+                <strong id="reward-relic-name" style="font-size: 20px; color: #f39c12;">Neznámá relikvie</strong>
+                <p id="reward-relic-desc" style="margin-bottom: 0;"></p>
+            </div>
+            <h3>Vyber si 1 kartu do svého balíčku:</h3>
+            <div id="card-reward-container" style="display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap;"></div>
+            <button onclick="skipReward()" style="margin-top: 30px; padding: 10px 20px; background: #95a5a6; border: none; color: white; cursor: pointer; border-radius: 5px;">Přeskočit odměnu</button>
+        </div>
+
+        <div id="hand-wrapper" style="display: none; width: 80%; margin: 20px auto; text-align: center; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; width: 100%; margin: 0 auto; color: white; font-weight: bold; font-size: 16px; background: #34495e; padding: 10px; border-radius: 5px; box-sizing: border-box;">
+                <div id="deck-count">🎴 V balíčku: ?</div>
+                <div id="discard-count">🗑️ Odhozeno: ?</div>
+            </div>
+            
+            <h2 id="hand-title" style="color: white; margin-top: 15px;">Tvoje ruka</h2>
+            <div id="hand-container" style="display: flex; gap: 10px; padding: 15px; justify-content: center; min-height: 120px; background: #ecf0f1; border-radius: 5px; flex-wrap: wrap; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);"></div>
+            
+            <button id="end-turn-btn" onclick="endTurn()" style="margin-top: 20px; padding: 15px 40px; font-size: 20px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">⌛ Ukončit tah</button>
         </div>
 
         <div style="width: 80%; margin: 20px auto;">
-            <ul id="log" style="background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; max-height: 200px; overflow-y: auto;"></ul>
+            <h3 style="color: #bdc3c7; margin-bottom: 5px;">Historie událostí</h3>
+            <ul id="log" style="background: #f9f9f9; color: #333; padding: 15px; border-radius: 5px; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; text-align: left; font-family: monospace; margin-top: 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);"></ul>
         </div>
-    </div>
-
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; }
-        .hero-btn { padding: 10px 20px; font-size: 16px; background: #34495e; color: white; border: 2px solid transparent; border-radius: 5px; cursor: pointer; transition: 0.2s; }
-        .hero-btn:hover { background: #1abc9c; }
-    </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+        
+    </div> <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script src="js/game.js"></script>
 </body>
+</html>
