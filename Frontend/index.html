@@ -1,37 +1,48 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karma: The Shared Burden</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
 <body>
-    <h1 style="text-align: center;">Karma: The Shared Burden</h1>
+    <h1 style="text-align: center; color: white;">Karma: The Shared Burden</h1>
     
-    <div id="lobby-screen" style="width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px;">
-            <h2>Vítej hrdino!</h2>
-            <p>Zadej své jméno a vyber si třídu:</p>
-            
-            <input type="text" id="player-name-input" placeholder="Tvé jméno..." style="padding: 10px; font-size: 16px; margin-bottom: 20px; width: 50%;">
-            
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
-                <button onclick="selectCharacter('Paladin')" style="padding: 15px; font-size: 16px; background: #f1c40f; color: black; border: none; border-radius: 5px; cursor: pointer;">🛡️ Paladin</button>
-                <button onclick="selectCharacter('Warlock')" style="padding: 15px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer;">💀 Warlock</button>
-                <button onclick="selectCharacter('Monk')" style="padding: 15px; font-size: 16px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">📿 Monk</button>
-                <button onclick="selectCharacter('Berserker')" style="padding: 15px; font-size: 16px; background: #c0392b; color: white; border: none; border-radius: 5px; cursor: pointer;">🪓 Berserker</button>
-                <button onclick="selectCharacter('Druid')" style="padding: 15px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer;">🌿 Druid</button>
-                <button onclick="selectCharacter('Rogue')" style="padding: 15px; font-size: 16px; background: #2c3e50; color: white; border: none; border-radius: 5px; cursor: pointer;">🗡️ Rogue</button>
-                <button onclick="selectCharacter('Bard')" style="padding: 15px; font-size: 16px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">🎵 Bard</button>
-                <button onclick="selectCharacter('Pyromancer')" style="padding: 15px; font-size: 16px; background: #d35400; color: white; border: none; border-radius: 5px; cursor: pointer;">🔥 Pyromancer</button>
-            </div>
+    <div id="lobby-screen" style="width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        <h2>Vítejte v krčmě!</h2>
+        
+        <input type="text" id="player-name-input" placeholder="Tvé jméno..." style="padding: 10px; font-size: 16px; margin: 10px; width: 30%;">
+        <input type="text" id="room-name-input" placeholder="Název místnosti (např. MojeHra123)" style="padding: 10px; font-size: 16px; margin: 10px; width: 30%;">
+        
+        <h3 style="margin-top: 20px;">1. Vyber si hrdinu:</h3>
+        <p>Aktuálně vybráno: <strong id="selected-hero-text" style="color: #e74c3c;">Nikdo</strong></p>
+        
+        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 30px;">
+            <button onclick="pickHero('Paladin')" class="hero-btn">🛡️ Paladin</button>
+            <button onclick="pickHero('Warlock')" class="hero-btn">💀 Warlock</button>
+            <button onclick="pickHero('Monk')" class="hero-btn">📿 Monk</button>
+            <button onclick="pickHero('Berserker')" class="hero-btn">🪓 Berserker</button>
+            <button onclick="pickHero('Druid')" class="hero-btn">🌿 Druid</button>
+            <button onclick="pickHero('Rogue')" class="hero-btn">🗡️ Rogue</button>
+            <button onclick="pickHero('Bard')" class="hero-btn">🎵 Bard</button>
+            <button onclick="pickHero('Pyromancer')" class="hero-btn">🔥 Pyromant</button>
         </div>
+
+        <h3>2. Vstup do hry:</h3>
+        <button onclick="createLobby()" style="padding: 15px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">➕ Vytvořit Místnost</button>
+        <button onclick="joinLobby()" style="padding: 15px 30px; font-size: 18px; background: #2980b9; color: white; border: none; border-radius: 5px; cursor: pointer;">Přípojit do Místnosti</button>
+    </div>
+
+    <div id="waiting-screen" style="display: none; width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px;">
+        <h2>Místnost: <span id="display-room-name"></span></h2>
+        <h3>Hráči v lobby:</h3>
+        <ul id="lobby-players-list" style="list-style: none; padding: 0; font-size: 18px;"></ul>
+        <button id="start-game-btn" onclick="startGame()" style="display: none; padding: 15px 30px; font-size: 18px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;">🚀 Spustit Hru!</button>
+        <p id="waiting-text" style="margin-top: 20px; font-style: italic;">Čekáme na zakladatele, až hru odstartuje...</p>
+    </div>
 
     <div id="game-screen" style="display: none;">
         
+        <div style="width: 80%; margin: 10px auto; text-align: center; background: #f1c40f; color: #2c3e50; padding: 10px; border-radius: 5px; font-weight: bold;">
+            🏆 Týmové Relikvie: <span id="relics-list">Zatím žádné</span>
+        </div>
+
         <div id="battle-hud">
             <div style="background: #e74c3c; padding: 10px; margin: 10px; border-radius: 5px; width: 80%; margin: 10px auto; text-align: center; color: white;">
-                <h2 style="margin: 0;">Boss HP: <span id="enemy-hp">100</span></h2>
+                <h2 style="margin: 0;">Nepřítel HP: <span id="enemy-hp">100</span></h2>
             </div>
             
             <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto;">
@@ -47,16 +58,22 @@
         
         <div id="hand-wrapper" style="width: 80%; margin: 20px auto; text-align: center;">
             <h2 id="hand-title">Tvoje ruka</h2>
-            <div id="hand-container" style="display: flex; gap: 10px; padding: 15px; justify-content: center; min-height: 120px; background: #ecf0f1; border-radius: 5px;"></div>
+            <div id="hand-container" style="display: flex; gap: 10px; padding: 15px; justify-content: center; min-height: 120px; background: #ecf0f1; border-radius: 5px; flex-wrap: wrap;"></div>
+            
+            <button id="end-turn-btn" onclick="endTurn()" style="margin-top: 20px; padding: 15px 40px; font-size: 20px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer;">⌛ Ukončit tah</button>
         </div>
 
         <div style="width: 80%; margin: 20px auto;">
-            <h3>Herní log:</h3>
             <ul id="log" style="background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; max-height: 200px; overflow-y: auto;"></ul>
         </div>
     </div>
 
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; }
+        .hero-btn { padding: 10px 20px; font-size: 16px; background: #34495e; color: white; border: 2px solid transparent; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        .hero-btn:hover { background: #1abc9c; }
+    </style>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script src="js/game.js"></script>
 </body>
-</html>

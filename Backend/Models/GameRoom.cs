@@ -51,7 +51,10 @@ namespace RoguelikeCardGame.Models
         public List<MapNode> Map { get; set; } = new List<MapNode>();
         public int CurrentNodeId { get; set; } = 0;
 
-        public ConcurrentDictionary<string, CardPlayData> PlayedCardsThisTurn { get; set; } = new ConcurrentDictionary<string, CardPlayData>();
+        // Změněno na List<CardPlayData>, aby hráč mohl zahrát více karet za kolo
+public ConcurrentDictionary<string, List<CardPlayData>> PlayedCardsThisTurn { get; set; } = new ConcurrentDictionary<string, List<CardPlayData>>();
+// Množina hráčů, kteří už klikli na "Ukončit tah"
+public HashSet<string> PlayersReady { get; set; } = new HashSet<string>();
 
         public GameRoom(string roomName)
         {
