@@ -9,10 +9,11 @@ namespace RoguelikeCardGame.Models
         public string Name { get; set; } = string.Empty;
         
         // --- HRDINA A ŽIVOTY ---
-        public string HeroClass { get; set; } = string.Empty;
-        public int Hp { get; set; }           // Aktuální životy
-        public int MaxHp { get; set; }        // Maximální životy
-
+        // --- HRDINA A ŽIVOTY ---
+public string HeroClass { get; set; } = string.Empty;
+public int Hp { get; set; }           // Aktuální životy
+public int MaxHp { get; set; }        // Maximální životy
+public int Block { get; set; } = 0;   // NOVÉ: Štíty (Blok)
         // --- MANA SYSTÉM ---
         public int Mana { get; set; }
         public int MaxMana { get; set; } = 3;

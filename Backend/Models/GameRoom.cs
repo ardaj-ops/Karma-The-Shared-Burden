@@ -41,7 +41,11 @@ namespace RoguelikeCardGame.Models
         public string RoomName { get; set; }
         public List<Player> Players { get; set; } = new List<Player>();
         public int CurrentKarma { get; set; } = 0;
-        public int EnemyHp { get; set; } = 100; 
+        // --- PARAMETRY AKTUÁLNÍHO BOJE ---
+public string EnemyName { get; set; } = "Neznámý nepřítel"; // NOVÉ: Jméno
+public int EnemyHp { get; set; } = 100;
+public int EnemyMaxHp { get; set; } = 100;                  // NOVÉ: Max HP
+public int CurrentKarma { get; set; } = 0; 
         
         // --- EKONOMIKA A POSTUP ---
         public int TeamGold { get; set; } = 50; // Společná pokladna
