@@ -44,6 +44,7 @@ namespace RoguelikeCardGame.Models
         // --- PARAMETRY AKTUÁLNÍHO BOJE ---
 public string EnemyName { get; set; } = "Neznámý nepřítel"; // NOVÉ: Jméno
 public int EnemyHp { get; set; } = 100;
+public int CurrentAct { get; set; } = 1; // Pamatuje si, v jakém jsme Aktu
 public int EnemyMaxHp { get; set; } = 100;                  // NOVÉ: Max HP
 public int CurrentKarma { get; set; } = 0; 
         

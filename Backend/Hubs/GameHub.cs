@@ -131,7 +131,7 @@ namespace RoguelikeCardGame.Hubs
 
                         for (int i = 0; i < enemyCount; i++)
                         {
-                            var template = EnemyDatabase.GetRandomEnemy(tier, 1); // Bere z Act 1
+                            var template = EnemyDatabase.GetRandomEnemy(tier, room.CurrentAct);
                             var action = EnemyDatabase.GetRandomActionForEnemy(template.Name);
                             
                             enemyList.Add(new ActiveEnemy {
@@ -281,11 +281,32 @@ namespace RoguelikeCardGame.Hubs
                         {
                             currentNode.IsCompleted = true;
                             if (currentNode.Type == NodeType.Boss)
-                            {
-                                await Clients.Group(roomName).SendAsync("GameOver", "Vítězství! Boss padl, kampaň je dokončena!");
-                                _activeRooms.TryRemove(roomName, out _);
-                                _roomEnemies.TryRemove(roomName, out _);
-                            }
+{
+    if (room.CurrentAct == 1)
+    {
+        room.CurrentAct = 2;
+        foreach(var node in room.Map) { node.IsCompleted = false; }
+        room.CurrentNodeId = 0; 
+        await Clients.Group(roomName).SendAsync("BattleWon", "🎉 Porazili jste Bosse 1. Aktu! Cesta do pouště a ruin (Act 2) je otevřena.");
+        await Clients.Group(roomName).SendAsync("GameStarted", roomName, room.Map); 
+    }
+    else if (room.CurrentAct == 2)
+    {
+        room.CurrentAct = 3;
+        foreach(var node in room.Map) { node.IsCompleted = false; }
+        room.CurrentNodeId = 0; 
+        await Clients.Group(roomName).SendAsync("BattleWon", "🌌 Přežili jste Act 2! Vstupujete do Prázdnoty a absolutní Karmy (Act 3).");
+        await Clients.Group(roomName).SendAsync("GameStarted", roomName, room.Map); 
+    }
+    else
+    {
+        // Konec po Act 3
+        await Clients.Group(roomName).SendAsync("GameOver", "🏆 Porazili jste finálního Bosse! Zachránili jste vesmír a vyhráli celou hru!");
+        _activeRooms.TryRemove(roomName, out _);
+        _roomEnemies.TryRemove(roomName, out _);
+    }
+}
+}   
                             else
                             {
                                 await Clients.Group(roomName).SendAsync("BattleWon", $"Nepřátelé poraženi! Vyberte další cestu na mapě.");
