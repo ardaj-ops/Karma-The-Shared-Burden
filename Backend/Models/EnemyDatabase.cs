@@ -8,9 +8,7 @@ namespace RoguelikeCardGame.Models
     {
         public static List<EnemyTemplate> Enemies = new List<EnemyTemplate>
         {
-            // ==========================================
-            // ACT 1 - NORMÁLNÍ (10), ELITY (5), BOSSOVÉ (3)
-            // ==========================================
+            // ================== ACT 1 - NORMÁLNÍ (10x) ==================
             new EnemyTemplate("1_N_01", "Kultista Temnoty", 60, "Normal", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Dýka ve tmě", DamageToAll = 5 }, new EnemyAction { Name = "Temný rituál", DamageToAll = 2, Heal = 10 },
                 new EnemyAction { Name = "Fanatismus", DamageToAll = 7 }, new EnemyAction { Name = "Otrávená čepel", DamageToAll = 4 },
@@ -82,6 +80,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Zoufalý útok", DamageToAll = 10 }, new EnemyAction { Name = "Zahojení ran", Heal = 15 }
             }),
 
+            // ================== ACT 1 - ELITY (5x) ==================
             new EnemyTemplate("1_E_01", "Temný Rytíř", 150, "Elite", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Těžký sek", DamageToAll = 12 }, new EnemyAction { Name = "Krvavá žeň", DamageToAll = 8, Heal = 15 },
                 new EnemyAction { Name = "Drtivý dopad", DamageToAll = 15 }, new EnemyAction { Name = "Proražení štítů", DamageToAll = 10 },
@@ -103,7 +102,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Drcení kostí", DamageToAll = 16 }, new EnemyAction { Name = "Hostina", Heal = 35 },
                 new EnemyAction { Name = "Záchvat zuřivosti", DamageToAll = 20 }, new EnemyAction { Name = "Krvavá koupel", DamageToAll = 14 }
             }),
-            new EnemyTemplate("1_E_04", "Kamenný Golem", 200, "Elite", 1, new List<EnemyAction> { 
+            new EnemyTemplate("1_E_04", "Kamenný Golem", 200, "Elite", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Zemětřesení", DamageToAll = 10 }, new EnemyAction { Name = "Vržený balvan", DamageToAll = 18 },
                 new EnemyAction { Name = "Krystalizace", Heal = 20 }, new EnemyAction { Name = "Drcení", DamageToAll = 15 },
                 new EnemyAction { Name = "Tlaková vlna", DamageToAll = 12 }, new EnemyAction { Name = "Nabírání síly", Heal = 30 },
@@ -118,6 +117,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Přízračná kosa", DamageToAll = 14 }, new EnemyAction { Name = "Vzkříšení těla", Heal = 40 }
             }),
 
+            // ================== ACT 1 - BOSSOVÉ (3x) ==================
             new EnemyTemplate("1_B_01", "Pán Karmy", 350, "Boss", 1, new List<EnemyAction> {
                 new EnemyAction { Name = "Zákon Rovnováhy", DamageToAll = 15, Heal = 15 }, new EnemyAction { Name = "Soudný den", DamageToAll = 25 },
                 new EnemyAction { Name = "Absolutní Očištění", Heal = 50 }, new EnemyAction { Name = "Drtivá tíha osudu", DamageToAll = 20 },
@@ -140,9 +140,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Zatemnění", DamageToAll = 12 }, new EnemyAction { Name = "Zkáza hnízda", DamageToAll = 32 }
             }),
 
-            // ==========================================
-            // ACT 2 - NORMÁLNÍ (10), ELITY (5), BOSSOVÉ (3)
-            // ==========================================
+            // ================== ACT 2 - NORMÁLNÍ (10x) ==================
             new EnemyTemplate("2_N_01", "Pouštní Štír", 85, "Normal", 2, new List<EnemyAction> {
                 new EnemyAction { Name = "Bodnutí hrotem", DamageToAll = 12 }, new EnemyAction { Name = "Sevření klepet", DamageToAll = 15 },
                 new EnemyAction { Name = "Jed", DamageToAll = 8 }, new EnemyAction { Name = "Zahrabání do písku", Heal = 20 },
@@ -214,6 +212,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Získání síly", DamageToAll = 10, Heal = 15 }, new EnemyAction { Name = "Totální odevzdání", DamageToAll = 28 }
             }),
 
+            // ================== ACT 2 - ELITY (5x) ==================
             new EnemyTemplate("2_E_01", "Anubis, Hlídač Hrobek", 250, "Elite", 2, new List<EnemyAction> {
                 new EnemyAction { Name = "Vážení duší", DamageToAll = 25 }, new EnemyAction { Name = "Písek času", DamageToAll = 20, Heal = 20 },
                 new EnemyAction { Name = "Soudný pohled", DamageToAll = 30 }, new EnemyAction { Name = "Úder žezlem", DamageToAll = 28 },
@@ -250,6 +249,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Bič bolesti", DamageToAll = 26 }, new EnemyAction { Name = "Vymazání naděje", DamageToAll = 38 }
             }),
 
+            // ================== ACT 2 - BOSSOVÉ (3x) ==================
             new EnemyTemplate("2_B_01", "Faraon Zatracených", 600, "Boss", 2, new List<EnemyAction> {
                 new EnemyAction { Name = "Božský soud", DamageToAll = 40 }, new EnemyAction { Name = "Slzy nebes", Heal = 100 },
                 new EnemyAction { Name = "Plagues of Egypt", DamageToAll = 35 }, new EnemyAction { Name = "Zkáza království", DamageToAll = 45 },
@@ -272,9 +272,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Vymazání rovnováhy", DamageToAll = 48 }, new EnemyAction { Name = "Konečný soud", DamageToAll = 65 }
             }),
 
-            // ==========================================
-            // ACT 3 - NORMÁLNÍ (10), ELITY (5), BOSSOVÉ (3)
-            // ==========================================
+            // ================== ACT 3 - NORMÁLNÍ (10x) ==================
             new EnemyTemplate("3_N_01", "Stín Prázdnoty", 180, "Normal", 3, new List<EnemyAction> {
                 new EnemyAction { Name = "Pohlcení světla", DamageToAll = 15, Heal = 10 }, new EnemyAction { Name = "Absolutní tma", DamageToAll = 22 },
                 new EnemyAction { Name = "Zkroucení mysli", DamageToAll = 18 }, new EnemyAction { Name = "Roztrhání reality", DamageToAll = 25 },
@@ -346,6 +344,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Zádušní mše", Heal = 40 }, new EnemyAction { Name = "Konečný akord", DamageToAll = 35 }
             }),
 
+            // ================== ACT 3 - ELITY (5x) ==================
             new EnemyTemplate("3_E_01", "Strážce Rovnováhy", 450, "Elite", 3, new List<EnemyAction> {
                 new EnemyAction { Name = "Kalibrace osudu", DamageToAll = 35 }, new EnemyAction { Name = "Kosmické misky vah", Heal = 60 },
                 new EnemyAction { Name = "Absolutní neutralita", DamageToAll = 45 }, new EnemyAction { Name = "Vykoupení", DamageToAll = 25, Heal = 30 },
@@ -382,6 +381,7 @@ namespace RoguelikeCardGame.Models
                 new EnemyAction { Name = "Slovo moci", DamageToAll = 50 }, new EnemyAction { Name = "Předzvěst", DamageToAll = 42 }
             }),
 
+            // ================== ACT 3 - BOSSOVÉ (3x) ==================
             new EnemyTemplate("3_B_01", "Ztělesnění Karmy", 1200, "Boss", 3, new List<EnemyAction> {
                 new EnemyAction { Name = "Absolutní soud", DamageToAll = 65 }, new EnemyAction { Name = "Vynulování rovnováhy", DamageToAll = 55 },
                 new EnemyAction { Name = "Vysátí veškeré naděje", Heal = 150 }, new EnemyAction { Name = "Zrcadlení hříchů", DamageToAll = 75 },
