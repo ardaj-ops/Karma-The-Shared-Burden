@@ -12,6 +12,9 @@ let cardDatabase = {};
 
 let myHand = []; 
 let myMana = 0;  
+let myGold = 0;
+let myDrawPileCount = 0;
+let myDiscardPileCount = 0;
 
 // --- 1. LOBBY A PŘIPOJENÍ ---
 function pickHero(hero) {
@@ -59,7 +62,7 @@ function showWaitingRoom() {
 // --- 2. SIGNALR UDÁLOSTI Z LOBBY A MAPY ---
 connection.on("LobbyError", (msg) => {
     alert(msg);
-    location.reload(); // Vrátí ho zpět
+    location.reload(); 
 });
 
 connection.on("LobbyUpdate", (players) => {
@@ -83,18 +86,24 @@ connection.on("GameStarted", (roomName, initialMap) => {
     
     gameMap = initialMap;
     logMessage(`🔥 Hra začala! Otevřete mapu a vyberte první místnost.`);
-    
-    // Necháme hráče v klidu koukat na mapu, nespouštíme hned bitvu!
     toggleUI("map");
     renderMap();
 });
 
+connection.on("UpdateRelics", (relicsList) => {
+    document.getElementById("relics-list").innerText = relicsList.length > 0 ? relicsList.join(" | ") : "Zatím žádné";
+});
+
 // --- 3. BITEVNÍ SYSTÉM ---
-connection.on("ReceiveInitialState", (hand, mana, serverCards) => {
+connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawCount, discardCount) => {
     cardDatabase = serverCards; 
     myHand = hand;
     myMana = mana;
-    updateManaUI();
+    myGold = gold || 0;
+    myDrawPileCount = drawCount || 0;
+    myDiscardPileCount = discardCount || 0;
+    
+    updateStatsUI();
     renderHand(); 
 });
 
@@ -115,16 +124,20 @@ connection.on("TurnResolved", (summary, totalDamage, newKarma, enemyHp) => {
     document.getElementById("karma-value").innerText = newKarma;
 });
 
-connection.on("ReceiveNewTurnState", (updatedHand, updatedMana) => {
+connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, drawCount, discardCount) => {
     myHand = updatedHand;
     myMana = updatedMana;
-    turnEnded = false; // Můžeme zase hrát
+    myGold = updatedGold || 0;
+    myDrawPileCount = drawCount || 0;
+    myDiscardPileCount = discardCount || 0;
+    
+    turnEnded = false; 
     logMessage(`🔄 Začíná tvůj nový tah!`);
     
     document.getElementById("end-turn-btn").disabled = false;
     document.getElementById("end-turn-btn").style.backgroundColor = "#8e44ad";
     
-    updateManaUI();
+    updateStatsUI();
     renderHand(); 
 });
 
@@ -140,7 +153,7 @@ connection.on("EnteredNode", (nodeType, nodeData) => {
 
 connection.on("ReceiveTreasure", (relicName) => {
     logMessage(`🏆 Tým získal relikvii: ${relicName}`);
-    document.getElementById("relics-list").innerText += ` [${relicName}] `;
+    document.getElementById("relics-list").innerText += ` | ${relicName}`;
 });
 
 connection.on("BattleWon", (message) => {
@@ -171,14 +184,18 @@ function playCard(cardId, karmaShift, damage) {
     const cardCost = cardDatabase[cardId] ? cardDatabase[cardId].cost : 1;
     if (myMana < cardCost) { alert("Nemáš dostatek Many!"); return; }
 
-    // Odečteme manu a kartu odstraníme z ruky u nás
     myMana -= cardCost; 
-    myHand = myHand.filter(id => id !== cardId); 
     
-    updateManaUI();
+    // Odstranění z ruky a přesun do odhazovacího balíčku
+    const cardIndex = myHand.indexOf(cardId);
+    if (cardIndex > -1) {
+        myHand.splice(cardIndex, 1); 
+        myDiscardPileCount++; 
+    }
+    
+    updateStatsUI();
     renderHand(); 
 
-    // Pošleme na server, ale server zatím NEVYHODNOCUJE TAH!
     connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage)
         .catch(err => console.error(err));
 }
@@ -187,7 +204,6 @@ function endTurn() {
     if (turnEnded) return;
     turnEnded = true;
     
-    // Vizuálně vypneme tlačítko
     document.getElementById("end-turn-btn").disabled = true;
     document.getElementById("end-turn-btn").style.backgroundColor = "gray";
     
@@ -196,9 +212,18 @@ function endTurn() {
 }
 
 // --- 5. VYKRESLOVÁNÍ UI ---
-function updateManaUI() {
+function updateStatsUI() {
     const manaElement = document.getElementById("mana-value");
     if (manaElement) manaElement.innerText = myMana;
+
+    const goldElement = document.getElementById("gold-value");
+    if (goldElement) goldElement.innerText = myGold;
+
+    const deckElement = document.getElementById("deck-count");
+    if (deckElement) deckElement.innerText = `🎴 V balíčku: ${myDrawPileCount}`;
+
+    const discardElement = document.getElementById("discard-count");
+    if (discardElement) discardElement.innerText = `🗑️ Odhozeno: ${myDiscardPileCount}`;
 }
 
 function renderHand() {
@@ -212,9 +237,9 @@ function renderHand() {
         const cardElement = document.createElement("button");
         cardElement.className = "card"; 
         
-        let color = "#ecf0f1"; // Základní šedá
-        if(cardData.karmaShift < 0) color = "#ffcccc"; // Červená pro temnotu
-        if(cardData.karmaShift > 0) color = "#ccffcc"; // Zelená pro světlo
+        let color = "#ecf0f1"; 
+        if(cardData.karmaShift < 0) color = "#ffcccc"; 
+        if(cardData.karmaShift > 0) color = "#ccffcc"; 
 
         cardElement.innerHTML = `<strong>${cardData.name}</strong><br><em>${cardData.cost} Many</em><br><hr style="margin:5px 0;"><small>${cardData.description}</small>`;
         cardElement.onclick = () => playCard(cardId, cardData.karmaShift, cardData.damage);
@@ -250,27 +275,55 @@ function toggleUI(state) {
     }
 }
 
+// --- VYLEPŠENÁ MAPA ---
 function renderMap() {
     const mapContainer = document.getElementById("nodes-list");
     if (!mapContainer) return;
     
     mapContainer.innerHTML = "";
     
-    gameMap.forEach(node => {
+    gameMap.forEach((node, index) => {
+        if (index > 0) {
+            const arrow = document.createElement("div");
+            arrow.innerText = "➔";
+            arrow.style.color = "white";
+            arrow.style.fontSize = "24px";
+            arrow.style.alignSelf = "center";
+            mapContainer.appendChild(arrow);
+        }
+
         const btn = document.createElement("button");
-        btn.innerText = `Patro ${node.floor}: ${node.type}`;
-        btn.style.padding = "15px";
-        btn.style.borderRadius = "5px";
-        btn.style.border = "none";
+        
+        let icon = "❓";
+        if (node.type === "Encounter") icon = "⚔️";
+        else if (node.type === "EliteEncounter") icon = "👹";
+        else if (node.type === "Boss") icon = "👑";
+        else if (node.type === "Treasure") icon = "💰";
+        else if (node.type === "RestPlace") icon = "⛺";
+
+        btn.innerHTML = `<div style="font-size: 24px;">${icon}</div><div style="font-size: 12px; margin-top: 5px;">Patro ${node.floor}</div>`;
+        btn.style.padding = "10px";
+        btn.style.borderRadius = "50%";
+        btn.style.border = "3px solid #2c3e50";
         btn.style.color = "white";
-        btn.style.fontWeight = "bold";
+        btn.style.width = "80px";
+        btn.style.height = "80px";
+        btn.style.display = "flex";
+        btn.style.flexDirection = "column";
+        btn.style.alignItems = "center";
+        btn.style.justifyContent = "center";
+        btn.style.transition = "transform 0.2s";
         
         if (node.isCompleted) {
-            btn.style.backgroundColor = "gray"; 
+            btn.style.backgroundColor = "#7f8c8d"; 
+            btn.style.borderColor = "#95a5a6";
             btn.disabled = true;
         } else {
             btn.style.backgroundColor = "#2ecc71"; 
             btn.style.cursor = "pointer";
+            btn.style.boxShadow = "0 0 10px rgba(46, 204, 113, 0.5)";
+            btn.onmouseover = () => btn.style.transform = "scale(1.1)";
+            btn.onmouseout = () => btn.style.transform = "scale(1)";
             btn.onclick = () => {
                 connection.invoke("MoveToNextNode", currentRoomName, node.id).catch(err => console.error(err));
             };

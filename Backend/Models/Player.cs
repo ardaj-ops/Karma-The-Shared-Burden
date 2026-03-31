@@ -5,27 +5,31 @@ namespace RoguelikeCardGame.Models
 {
     public class Player
     {
-        public string ConnectionId { get; set; } 
-        public string Name { get; set; }
+        public string ConnectionId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         
-        // --- NOVÉ: HRDINA A ŽIVOTY ---
-public string HeroClass { get; set; } = string.Empty;
+        // --- HRDINA A ŽIVOTY ---
+        public string HeroClass { get; set; } = string.Empty;
         public int Hp { get; set; }           // Aktuální životy
-        public int MaxHp { get; set; }        // Maximální životy (načtené z HeroTemplate)
+        public int MaxHp { get; set; }        // Maximální životy
 
         // --- MANA SYSTÉM ---
-        // Vlastnosti (Properties) pro sledování aktuální a maximální many
         public int Mana { get; set; }
         public int MaxMana { get; set; } = 3;
 
+        // --- NOVÉ: EKONOMIKA ---
+        public int Gold { get; set; } = 50;   // Každý hráč začne s 50 zlaťáky
+
         // --- DECK SYSTÉM ---
-        // Seznamy pro držení ID karet (např. "Py_50")
         public List<string> StartingDeck { get; set; } = new List<string>();
         public List<string> DrawPile { get; set; } = new List<string>();
         public List<string> Hand { get; set; } = new List<string>();
         public List<string> DiscardPile { get; set; } = new List<string>();
 
-        // Tvůj původní konstruktor (volá se při vytvoření nového hráče)
+        // Prázdný konstruktor (Důležité pro SignalR/Serializaci)
+        public Player() { }
+
+        // Hlavní konstruktor
         public Player(string connectionId, string name)
         {
             ConnectionId = connectionId;
@@ -34,20 +38,20 @@ public string HeroClass { get; set; } = string.Empty;
 
         // --- FUNKCE PRO HRU ---
 
-        // 1. Připraví hru: nakopíruje balíček, vyčistí ruku, nastaví manu, životy a zamíchá
+        // 1. Připraví hru: nakopíruje balíček, vyčistí ruku, nastaví manu a životy
         public void InitializeGame()
         {
-            DrawPile = new List<string>(StartingDeck); // Vytvoří kopii startovního balíčku
+            DrawPile = new List<string>(StartingDeck); 
             Hand.Clear();
             DiscardPile.Clear();
             
             Mana = MaxMana; 
-            Hp = MaxHp; // NOVÉ: Na startu hry má hráč vždy plné životy
+            Hp = MaxHp; // Na startu hry (v první místnosti) má hráč plné životy
             
             ShuffleDeck();
         }
 
-        // 2. Zamíchá dobírací balíček (používá Fisher-Yates algoritmus)
+        // 2. Zamíchá dobírací balíček (Fisher-Yates algoritmus)
         public void ShuffleDeck()
         {
             Random rng = new Random();
@@ -56,7 +60,6 @@ public string HeroClass { get; set; } = string.Empty;
             {
                 n--;
                 int k = rng.Next(n + 1);
-                // Prohození karet
                 string value = DrawPile[k];
                 DrawPile[k] = DrawPile[n];
                 DrawPile[n] = value;
@@ -68,7 +71,6 @@ public string HeroClass { get; set; } = string.Empty;
         {
             for (int i = 0; i < count; i++)
             {
-                // Pokud nám došly karty v dobíracím balíčku, otočíme odhazovací
                 if (DrawPile.Count == 0)
                 {
                     if (DiscardPile.Count > 0)
@@ -79,12 +81,10 @@ public string HeroClass { get; set; } = string.Empty;
                     }
                     else
                     {
-                        // Pokud nemáme karty ani v odhazovacím, přestaneme lízat
-                        break; 
+                        break; // Už nejsou žádné karty k líznutí
                     }
                 }
 
-                // Vezmeme první kartu shora, dáme ji do ruky a smažeme z balíčku
                 string drawnCard = DrawPile[0];
                 DrawPile.RemoveAt(0);
                 Hand.Add(drawnCard);
