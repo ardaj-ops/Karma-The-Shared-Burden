@@ -45,7 +45,8 @@ namespace RoguelikeCardGame.Hubs
                     }
                     else
                     {
-                        await Clients.Group(roomKvp.Key).SendAsync("LobbyUpdate", room.Players.Select(p => p.Name).ToList());
+                        // ZMĚNA: Tady posíláme jméno i třídu při odpojení hráče
+                        await Clients.Group(roomKvp.Key).SendAsync("LobbyUpdate", room.Players.Select(p => new { name = p.Name, heroClass = p.HeroClass }).ToList());
                     }
                     break;
                 }
@@ -76,12 +77,13 @@ namespace RoguelikeCardGame.Hubs
                 room.Players.Add(newPlayer);
                 await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
                 
-                await Clients.Group(roomName).SendAsync("LobbyUpdate", room.Players.Select(p => p.Name).ToList());
+                // ZMĚNA: Tady posíláme jméno i třídu při připojení hráče
+                await Clients.Group(roomName).SendAsync("LobbyUpdate", room.Players.Select(p => new { name = p.Name, heroClass = p.HeroClass }).ToList());
+                
                 if (room.Players.Count == 1) await Clients.Caller.SendAsync("YouAreHost");
             }
             else { await Clients.Caller.SendAsync("LobbyError", "Místnost nenalezena!"); }
         }
-
         public async Task StartGame(string roomName)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
@@ -317,8 +319,8 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // --- REAL-TIME BOJ S OKAMŽITÝM EFEKTEM KARET (Vč. DrawCards) ---
-        public async Task SelectCard(string roomName, string playerName, string cardId, int karmaShift, int damage, string targetEnemyId)
+        // --- REAL-TIME BOJ S CÍLENÝM LÉČENÍM SPOLUHRÁČŮ ---
+        public async Task SelectCard(string roomName, string playerName, string cardId, int karmaShift, int damage, string targetEnemyId, string targetPlayerName)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
             {
@@ -338,16 +340,27 @@ namespace RoguelikeCardGame.Hubs
                         // 1. Zpracování Defenzivy
                         int block = fullCard.Block + (isUpgraded && fullCard.Block > 0 ? 3 : 0);
                         int heal = fullCard.Heal + (isUpgraded && fullCard.Heal > 0 ? 2 : 0);
+                        
                         player.Block += block;
-                        player.Hp += heal;
-                        if (player.Hp > player.MaxHp) player.Hp = player.MaxHp;
 
-                        // 2. Okamžité líznutí karet (pokud karta umožňuje lízání)
+                        // --- NOVÉ: Zpracování cíleného léčení ---
+                        if (heal > 0)
+                        {
+                            // Pokud není cíl vybrán (např. útočná karta se self-healem), léčí se hráč, který kartu zahrál.
+                            // Pokud je cíl vybrán, najdeme ho v týmu a vyléčíme jeho.
+                            var targetPlayer = string.IsNullOrEmpty(targetPlayerName) ? player : room.Players.FirstOrDefault(p => p.Name == targetPlayerName);
+                            if (targetPlayer != null) 
+                            {
+                                targetPlayer.Hp += heal;
+                                if (targetPlayer.Hp > targetPlayer.MaxHp) targetPlayer.Hp = targetPlayer.MaxHp;
+                            }
+                        }
+
+                        // 2. Okamžité líznutí karet
                         int drawAmount = fullCard.DrawCards;
                         if (drawAmount > 0)
                         {
                             player.DrawCards(drawAmount);
-                            // Abychom ušetřili kód na frontendu, pošleme prostě celý nový stav hráče
                             var enemiesForSync = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
                             await Clients.Client(player.ConnectionId).SendAsync("ReceiveNewTurnState", 
                                 player.Hand, player.Mana, player.Gold, player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, enemiesForSync);
@@ -356,14 +369,13 @@ namespace RoguelikeCardGame.Hubs
 
                     var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
                     
-                    // 3. Zpracování Ofenzivy v reálném čase
+                    // 3. Zpracování Ofenzivy
                     if (damage > 0)
                     {
                         double damageMultiplier = 1.0;
                         if (room.CurrentKarma >= 10) damageMultiplier = 0.8;
                         else if (room.CurrentKarma <= -10) damageMultiplier = 1.3;
 
-                        // Pokud má karta vícero hitů, vynásobíme celkový damage počtem hitů
                         int hitCount = 1;
                         if (CardDatabase.Cards.TryGetValue(baseCardId, out var cDataForHits))
                         {

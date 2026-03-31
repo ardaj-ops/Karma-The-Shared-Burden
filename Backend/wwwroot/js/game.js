@@ -13,7 +13,9 @@ let myHp = 0; let myMaxHp = 0; let myBlock = 0;
 
 let myCurrentNodeId = -1;
 let currentEnemiesArray = []; 
+let currentTeamData = []; // NOVÉ: Paměť pro aktuální tým kvůli vykreslování cílení
 let selectedTargetCard = null; 
+let selectedTargetAllyCard = null; // NOVÉ: Karta vyžadující kliknutí na spoluhráče
 let currentMapVotes = {}; 
 
 // --- NAČTENÍ JMÉNA Z PAMĚTI PROHLÍŽEČE ---
@@ -83,12 +85,9 @@ function logMessage(msg) {
 function pickHero(hero) { 
     playerClass = hero; 
     document.getElementById("selected-hero-text").innerText = hero; 
-    
-    // Zvýraznění vybraného tlačítka
     document.querySelectorAll(".hero-btn").forEach(btn => {
         btn.style.boxShadow = "none";
         btn.style.border = "2px solid transparent";
-        // Najdeme to správné tlačítko podle jeho onclick atributu
         if (btn.getAttribute("onclick").includes(hero)) {
             btn.style.boxShadow = "0 0 15px #f1c40f";
             btn.style.border = "2px solid #f1c40f";
@@ -100,8 +99,6 @@ function getCredentials() {
     playerName = document.getElementById("player-name-input").value.trim();
     currentRoomName = document.getElementById("room-name-input").value.trim();
     if (!playerName || !currentRoomName || !playerClass) { alert("Musíš vyplnit všechny údaje (Jméno, Místnost i Hrdinu)!"); return false; }
-    
-    // Uložení jména do paměti prohlížeče
     localStorage.setItem("karmaPlayerName", playerName);
     return true;
 }
@@ -115,7 +112,13 @@ function showWaitingRoom() { hideElement("lobby-screen"); showElement("waiting-s
 connection.on("LobbyError", (msg) => { alert(msg); location.reload(); });
 connection.on("LobbyUpdate", (players) => {
     const list = document.getElementById("lobby-players-list"); list.innerHTML = "";
-    players.forEach(p => { const li = document.createElement("li"); li.innerText = "🧙‍♂️ " + p; list.appendChild(li); });
+    players.forEach(p => { 
+        const li = document.createElement("li"); 
+        let pName = safeGet(p, 'name', 'Name') || p; // Záchrana pro starší verzi
+        let pClass = safeGet(p, 'heroClass', 'HeroClass');
+        li.innerHTML = `🧙‍♂️ <strong>${pName}</strong> ${pClass ? `<span style="color: #f1c40f; font-size: 16px;">(${pClass})</span>` : ""}`; 
+        list.appendChild(li); 
+    });
 });
 connection.on("YouAreHost", () => { showElement("start-game-btn", "inline-block"); hideElement("waiting-text"); });
 
@@ -139,7 +142,8 @@ connection.on("UpdateRelics", (relicsList) => {
     });
 });
 
-connection.on("UpdateTeamStats", (teamData) => { renderTeam(teamData); });
+// --- ZMĚNA Ukládáme si lokálně tým, abychom mohli cílit ---
+connection.on("UpdateTeamStats", (teamData) => { currentTeamData = teamData; renderTeam(teamData); });
 connection.on("UpdateMapVotes", (votes) => { currentMapVotes = votes; renderMap(); });
 
 connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawPile, discardPile, hp, maxHp, block, startingDeck) => {
@@ -150,7 +154,7 @@ connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawPile, d
     updateStatsUI(); renderHand(); 
 });
 
-connection.on("CardPlayedLog", (player, cardId) => { const cData = getCardData(cardId); logMessage(`🎴 ${player} připravil kartu: ${cData.name}`); });
+connection.on("CardPlayedLog", (player, cardId) => { const cData = getCardData(cardId); logMessage(`🎴 ${player} zahrál: ${cData.name}`); });
 connection.on("PlayerReadyLog", (player, readyCount, totalPlayers) => { logMessage(`✅ ${player} ukončil tah. (${readyCount}/${totalPlayers})`); });
 connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => { logMessage(`--- TAH VYHODNOCEN ---`); currentEnemiesArray = enemiesArray; renderEnemies(enemiesArray); updateKarmaUI(newKarma); });
 
@@ -159,9 +163,9 @@ connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, dra
     myDrawPile = drawPile || []; myDiscardPile = discardPile || [];
     myDrawPileCount = myDrawPile.length; myDiscardPileCount = myDiscardPile.length;
     myHp = hp || 0; myMaxHp = maxHp || 0; myBlock = block || 0;
-    turnEnded = false; currentEnemiesArray = enemiesArray; selectedTargetCard = null; 
+    turnEnded = false; currentEnemiesArray = enemiesArray; selectedTargetCard = null; selectedTargetAllyCard = null;
     document.getElementById("end-turn-btn").disabled = false; document.getElementById("end-turn-btn").style.backgroundColor = "#8e44ad";
-    renderEnemies(enemiesArray); updateStatsUI(); renderHand(); 
+    renderEnemies(enemiesArray); updateStatsUI(); renderHand(); renderTeam(currentTeamData);
 });
 
 connection.on("EnteredNode", (nodeTypeRaw, nodeData, enemiesArray) => {
@@ -276,36 +280,66 @@ function chooseRestUpgrade(cardId) { closeUpgradeModal(); connection.invoke("Res
 
 connection.on("RestActionCompleted", (newHp, newDeck) => { myHp = newHp; myStartingDeck = newDeck; updateStatsUI(); logMessage("Odpočinek u táboráku úspěšně dokončen."); toggleUI("map"); renderMap(); });
 
-// --- BOJ A HRANÍ KARET ---
+// --- BOJ A CÍLENÍ (LÉČENÍ SPOLUHRÁČŮ / ÚTOK NA MONSTRA) ---
 function playCard(cardId, karmaShift, damage) {
     if (isGameOver) return; 
     if (turnEnded) { alert("Už jsi ukončil tah!"); return; }
+    
     const cardData = getCardData(cardId);
     if (myMana < cardData.cost) { alert("Nemáš dostatek Many!"); return; }
 
+    // Pokud karta udílí zranění, cílíme na Nepřítele
     if (cardData.damage > 0) {
         selectedTargetCard = { id: cardId, karmaShift: karmaShift, damage: cardData.damage, cost: cardData.cost };
+        selectedTargetAllyCard = null;
         logMessage("🎯 Vyber cíl pro útok (klikni na nepřítele)!");
         renderEnemies(currentEnemiesArray); 
+        renderTeam(currentTeamData);
         return;
-    } else { executeCardPlay(cardId, karmaShift, 0, cardData.cost, ""); }
+    } 
+    // Pokud karta jen léčí, cílíme na Spoluhráče v týmu (nebo sebe)
+    else if (cardData.heal > 0) {
+        selectedTargetAllyCard = { id: cardId, karmaShift: karmaShift, cost: cardData.cost };
+        selectedTargetCard = null;
+        logMessage("💚 Vyber koho chceš vyléčit (klikni na hráče v týmu)!");
+        renderTeam(currentTeamData);
+        renderEnemies(currentEnemiesArray);
+        return;
+    }
+    // Ostatní karty (blokování, lízání) se rovnou zahrají na sebe
+    else { 
+        executeCardPlay(cardId, karmaShift, 0, cardData.cost, "", ""); 
+    }
 }
 
-function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId) {
+// ZMĚNA: Přidán parametr targetPlayerName
+function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId, targetPlayerName = "") {
     myMana -= cardCost; 
     const cardIndex = myHand.indexOf(cardId);
     if (cardIndex > -1) { myHand.splice(cardIndex, 1); myDiscardPileCount++; }
+    
     const cData = getCardData(cardId);
-    myBlock += (cData.block || 0); myHp += (cData.heal || 0); if(myHp > myMaxHp) myHp = myMaxHp;
+    myBlock += (cData.block || 0); 
+    
+    // Front-end predikce léčení pro sebe (pokud jsi cíl ty, nebo pokud to nebyla cílená léčící karta)
+    if (targetPlayerName === playerName || (!targetPlayerName && cData.heal > 0)) {
+        myHp += (cData.heal || 0); 
+        if(myHp > myMaxHp) myHp = myMaxHp;
+    }
+    
     selectedTargetCard = null; 
-    updateStatsUI(); renderHand(); renderEnemies(currentEnemiesArray); 
-    connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage, targetEnemyId).catch(err => console.error(err));
+    selectedTargetAllyCard = null; 
+    
+    updateStatsUI(); renderHand(); renderEnemies(currentEnemiesArray); renderTeam(currentTeamData);
+    
+    // Odesíláme na server obě ID (nepřítele i hráče). Jedno z nich bude vždy prázdné.
+    connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage, targetEnemyId || "", targetPlayerName || "").catch(err => console.error(err));
 }
 
 function endTurn() {
-    if (turnEnded) return; turnEnded = true; selectedTargetCard = null; 
+    if (turnEnded) return; turnEnded = true; selectedTargetCard = null; selectedTargetAllyCard = null;
     document.getElementById("end-turn-btn").disabled = true; document.getElementById("end-turn-btn").style.backgroundColor = "gray";
-    renderEnemies(currentEnemiesArray); 
+    renderEnemies(currentEnemiesArray); renderTeam(currentTeamData);
     connection.invoke("PlayerReady", currentRoomName, playerName).catch(err => console.error(err));
 }
 
@@ -327,6 +361,9 @@ connection.on("ShowRewardScreen", (cardChoices, relicChoice, goldReward, newGold
         let id = safeGet(card, 'id', 'Id'); let karma = safeGet(card, 'karmaShift', 'KarmaShift');
         let color = "#ecf0f1"; if(karma < 0) color = "#ffcccc"; if(karma > 0) color = "#ccffcc"; 
         btn.innerHTML = `<strong>${safeGet(card, 'name', 'Name')}</strong><br><em>${safeGet(card, 'cost', 'Cost')} Many</em><br><hr style="margin:5px 0;"><small>${safeGet(card, 'description', 'Description')}</small>`;
+        
+        btn.title = `${safeGet(card, 'name', 'Name')}\nCena: ${safeGet(card, 'cost', 'Cost')} Many\nEfekt: ${safeGet(card, 'description', 'Description')}`;
+        
         btn.style.cssText = `padding: 15px; width: 160px; border: 3px solid #34495e; border-radius: 8px; background: ${color}; cursor: pointer;`;
         btn.onclick = () => {
             let relId = currentRelicReward ? safeGet(currentRelicReward, 'id', 'Id') : "";
@@ -367,19 +404,30 @@ function showStartingDeck() { showModalWithCards("Tvůj kompletní balíček", m
 function showDrawPile() { showModalWithCards("Karty k líznutí", myDrawPile); }
 function showDiscardPile() { showModalWithCards("Odhozené karty", myDiscardPile); }
 
+// --- ZMĚNA: Přidána možnost kliknout na hráče pro léčení ---
 function renderTeam(teamData) {
     const container = document.getElementById("team-container"); if (!container) return; container.innerHTML = "";
     teamData.forEach(player => {
         const name = safeGet(player, 'name', 'Name');
         const isMe = name === playerName; 
-        
-        // Získáme třídu hrdiny (buď ze serveru, pokud ji pošle, nebo použijeme tu naši lokální, pokud jsme to my)
         const pClass = safeGet(player, 'heroClass', 'HeroClass') || safeGet(player, 'class', 'Class') || (isMe ? playerClass : "Hrdina");
 
         const div = document.createElement("div");
-        div.style.cssText = `background: ${isMe ? "#27ae60" : "#2980b9"}; color: white; padding: 8px 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); text-align: center; min-width: 120px;`;
+        div.style.cssText = `background: ${isMe ? "#27ae60" : "#2980b9"}; color: white; padding: 8px 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); text-align: center; min-width: 120px; transition: all 0.3s ease;`;
         
-        // Zde jsme přidali zobrazení vybrané postavy zlatým písmem!
+        // Zpracování cílení na hráče (Léčení)
+        if (selectedTargetAllyCard) {
+            div.style.cursor = "crosshair"; 
+            div.style.boxShadow = "0 0 20px #2ecc71"; 
+            div.style.transform = "scale(1.05)";
+            div.title = "Klikni pro vyléčení!";
+            div.onclick = () => executeCardPlay(selectedTargetAllyCard.id, selectedTargetAllyCard.karmaShift, 0, selectedTargetAllyCard.cost, "", name);
+        } else {
+            div.style.cursor = "default";
+            div.title = "";
+            div.onclick = null;
+        }
+
         div.innerHTML = `<div style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 5px;">${name} <br><span style="font-size:12px; color:#f1c40f;">(${pClass})</span></div>
             <div style="font-size: 14px;">❤️ ${safeGet(player, 'hp', 'Hp')} / ${safeGet(player, 'maxHp', 'MaxHp')}</div>
             <div style="font-size: 14px;">🛡️ Blok: ${safeGet(player, 'block', 'Block')}</div>`;
@@ -387,7 +435,6 @@ function renderTeam(teamData) {
     });
 }
 
-// --- VYLEPŠENÉ VYKRESLOVÁNÍ NEPŘÁTEL S POPISKY ---
 function renderEnemies(enemiesArray) {
     const container = document.getElementById("enemies-container"); if (!container) return; container.innerHTML = "";
     if (!enemiesArray || enemiesArray.length === 0) return;
@@ -400,13 +447,11 @@ function renderEnemies(enemiesArray) {
 
         const div = document.createElement("div");
         div.style.cssText = "background: #c0392b; padding: 10px; border-radius: 5px; color: white; text-align: center; min-width: 160px; transition: all 0.3s ease;";
-        
-        // PŘIDÁNO: Nativní popisek na nepřítele
         div.title = `Nepřítel: ${name}\nŽivoty: ${hp}/${maxHp}\nZáměr: ${actionDesc}`;
         
         if (selectedTargetCard) {
             div.style.cursor = "crosshair"; div.style.boxShadow = "0 0 20px #e74c3c"; div.style.transform = "scale(1.05)";
-            div.onclick = () => executeCardPlay(selectedTargetCard.id, selectedTargetCard.karmaShift, selectedTargetCard.damage, selectedTargetCard.cost, id);
+            div.onclick = () => executeCardPlay(selectedTargetCard.id, selectedTargetCard.karmaShift, selectedTargetCard.damage, selectedTargetCard.cost, id, "");
         } else {
             div.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)"; div.style.cursor = "default"; div.onclick = null; 
         }
@@ -438,21 +483,19 @@ function updateKarmaUI(karma) {
     const statusEl = document.getElementById("karma-status"); if(statusEl) { statusEl.innerText = statusText; statusEl.style.color = statusColor; }
 }
 
-// --- VYLEPŠENÉ VYKRESLOVÁNÍ RUKY S POPISKY ---
 function renderHand() {
     const handContainer = document.getElementById("hand-container"); if (!handContainer) return; handContainer.innerHTML = ""; 
     myHand.forEach(cardId => {
-        const cData = getCardData(cardId); 
-        const cardElement = document.createElement("button"); 
-        cardElement.className = "card"; 
+        const cData = getCardData(cardId); const cardElement = document.createElement("button"); cardElement.className = "card"; 
         let color = "#ecf0f1"; if(cData.karmaShift < 0) color = "#ffcccc"; if(cData.karmaShift > 0) color = "#ccffcc"; 
-        
         cardElement.innerHTML = `<strong>${cData.name}</strong><br><em>${cData.cost} Many</em><br><hr style="margin:5px 0;"><small>${cData.description}</small>`;
         
-        // PŘIDÁNO: Nativní popisek (tooltip), když hráč najede na kartu myší
         cardElement.title = `${cData.name}\nCena: ${cData.cost} Many\nEfekt: ${cData.description}`;
         
-        cardElement.onclick = () => { if (selectedTargetCard) { logMessage("Nejprve vyber cíl pro předešlou kartu!"); return; } playCard(cardId, cData.karmaShift, cData.damage); };
+        cardElement.onclick = () => { 
+            if (selectedTargetCard || selectedTargetAllyCard) { logMessage("Nejprve vyber cíl!"); return; } 
+            playCard(cardId, cData.karmaShift, cData.damage); 
+        };
         cardElement.style.cssText = `padding: 10px; width: 140px; border: 2px solid #34495e; border-radius: 8px; background: ${color}; cursor: pointer;`;
         handContainer.appendChild(cardElement);
     });
