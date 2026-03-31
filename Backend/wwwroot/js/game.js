@@ -94,13 +94,24 @@ connection.on("YouAreHost", () => {
     hideElement("waiting-text"); 
 });
 
+// --- START HRY A PŘÍJEM MAPY ---
 connection.on("GameStarted", (roomName, initialMap) => {
+    console.log("🔥 GAME STARTED! Data mapy ze serveru:", initialMap); // DETEKTIVNÍ VÝPIS 1
+
     hideElement("waiting-screen");
     showElement("game-screen");
     
-    gameMap = initialMap; myCurrentNodeId = -1; currentMapVotes = {};
+    // Ochrana pro případ, že by mapa přišla prázdná
+    gameMap = initialMap || []; 
+    myCurrentNodeId = -1; currentMapVotes = {};
     logMessage(`🔥 Hra začala! Hlasujte pro startovní políčko.`);
-    toggleUI("map"); renderMap();
+    toggleUI("map"); 
+    
+    try {
+        renderMap();
+    } catch (err) {
+        console.error("❌ KRITICKÁ CHYBA PŘI VYKRESLOVÁNÍ MAPY:", err); // DETEKTIVNÍ VÝPIS 2
+    }
 });
 
 connection.on("UpdateRelics", (relicsList) => {
@@ -490,19 +501,39 @@ function toggleUI(state) {
 }
 
 // --- VYLEPŠENÁ MAPA S IKONAMI A HLASOVÁNÍM ---
+// --- VYLEPŠENÁ MAPA S IKONAMI A HLASOVÁNÍM ---
 function renderMap() {
-    const mapContainer = document.getElementById("nodes-list"); if (!mapContainer) return;
-    mapContainer.innerHTML = ""; mapContainer.style.position = "relative"; mapContainer.style.display = "flex";
-    mapContainer.style.flexDirection = "column-reverse"; mapContainer.style.gap = "50px"; mapContainer.style.padding = "20px";
+    const mapContainer = document.getElementById("nodes-list"); 
+    if (!mapContainer) {
+        console.warn("⚠️ Kontejner pro mapu (nodes-list) nebyl nalezen!");
+        return;
+    }
+
+    if (gameMap.length === 0) {
+        console.warn("⚠️ Mapa je prázdná! Není co vykreslovat.");
+        mapContainer.innerHTML = "<p style='color: white;'>Mapa je prázdná...</p>";
+        return;
+    }
+
+    mapContainer.innerHTML = ""; 
+    mapContainer.style.position = "relative"; 
+    mapContainer.style.display = "flex";
+    mapContainer.style.flexDirection = "column-reverse"; 
+    mapContainer.style.gap = "50px"; 
+    mapContainer.style.padding = "20px";
 
     let currentNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId);
     let validNextNodeIds = currentNode ? safeGet(currentNode, 'connectedTo', 'ConnectedTo') : [];
     if (!validNextNodeIds) validNextNodeIds = [];
 
-    const maxFloor = Math.max(...gameMap.map(n => safeGet(n, 'floor', 'Floor') || 0));
+    // Ochrana před chybou při prázdném poli pater
+    let floorValues = gameMap.map(n => safeGet(n, 'floor', 'Floor') || 0);
+    const maxFloor = floorValues.length > 0 ? Math.max(...floorValues) : 0;
     
     for (let f = 0; f <= maxFloor; f++) {
         const floorNodes = gameMap.filter(n => safeGet(n, 'floor', 'Floor') === f);
+        if (floorNodes.length === 0) continue; // Přeskočíme prázdná patra
+
         const row = document.createElement("div");
         row.style.display = "flex"; row.style.justifyContent = "center"; row.style.gap = "80px"; row.style.zIndex = "2"; 
         
