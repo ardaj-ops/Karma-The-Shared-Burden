@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Karma: The Shared Burden</title>
     <link rel="stylesheet" href="css/style.css">
+    
     <style>
         .hidden { display: none !important; }
     </style>
@@ -151,6 +152,7 @@
             elementsToHide.forEach(id => {
                 let el = document.getElementById(id);
                 if(el) {
+                    el.classList.add("hidden");
                     el.style.display = "none";
                 }
             });
