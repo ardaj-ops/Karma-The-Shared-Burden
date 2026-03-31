@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Karma: The Shared Burden</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <h1 style="text-align: center; color: white; margin-top: 20px;">Karma: The Shared Burden</h1>
     
-    <div id="lobby-screen" style="width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <div id="lobby-screen" style="width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); color: #2c3e50;">
         <h2>Vítejte v krčmě!</h2>
         <input type="text" id="player-name-input" placeholder="Tvé jméno..." style="padding: 10px; font-size: 16px; margin: 10px; width: 30%; border: 1px solid #bdc3c7; border-radius: 5px;">
         <input type="text" id="room-name-input" placeholder="Název místnosti (např. MojeHra123)" style="padding: 10px; font-size: 16px; margin: 10px; width: 30%; border: 1px solid #bdc3c7; border-radius: 5px;">
@@ -29,37 +29,37 @@
         </div>
 
         <h3>2. Vstup do hry:</h3>
-        <button onclick="createLobby()" style="padding: 15px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">➕ Vytvořit Místnost</button>
-        <button onclick="joinLobby()" style="padding: 15px 30px; font-size: 18px; background: #2980b9; color: white; border: none; border-radius: 5px; cursor: pointer;">Připojit do Místnosti</button>
+        <button onclick="createLobby()" style="padding: 15px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; transition: background 0.3s;" onmouseover="this.style.background='#2ecc71'" onmouseout="this.style.background='#27ae60'">➕ Vytvořit Místnost</button>
+        <button onclick="joinLobby()" style="padding: 15px 30px; font-size: 18px; background: #2980b9; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#3498db'" onmouseout="this.style.background='#2980b9'">Připojit do Místnosti</button>
     </div>
 
-    <div id="waiting-screen" style="display: none; width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px;">
+    <div id="waiting-screen" class="hidden" style="width: 80%; margin: 20px auto; text-align: center; background: #ecf0f1; padding: 30px; border-radius: 10px; color: #2c3e50;">
         <h2>Místnost: <span id="display-room-name"></span></h2>
         <h3>Hráči v lobby:</h3>
         <ul id="lobby-players-list" style="list-style: none; padding: 0; font-size: 18px;"></ul>
-        <button id="start-game-btn" onclick="startGame()" style="display: none; padding: 15px 30px; font-size: 18px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;">🚀 Spustit Hru!</button>
+        <button id="start-game-btn" class="hidden" onclick="startGame()" style="padding: 15px 30px; font-size: 18px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;">🚀 Spustit Hru!</button>
         <p id="waiting-text" style="margin-top: 20px; font-style: italic; color: #7f8c8d;">Čekáme na zakladatele, až hru odstartuje...</p>
     </div>
 
-    <div id="game-screen" style="display: none;">
+    <div id="game-screen" class="hidden">
         
         <div style="display: flex; justify-content: space-between; width: 80%; margin: 10px auto;">
             <div style="flex-grow: 1; text-align: center; background: #f1c40f; color: #2c3e50; padding: 10px; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-right: 10px;">
                 🏆 Týmové Relikvie: <span id="relics-list">Zatím žádné</span>
             </div>
-            <button onclick="showStartingDeck()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            <button onclick="showStartingDeck()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: 0.2s;" onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='#3498db'">
                 🎴 Můj Balíček
             </button>
         </div>
 
         <div id="team-container" style="display: flex; justify-content: center; gap: 15px; margin: 10px auto; width: 80%; flex-wrap: wrap;"></div>
 
-        <div id="map-container" style="display: none; background: #34495e; color: white; padding: 20px; border-radius: 5px; margin: 20px auto; width: 80%; text-align: center; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+        <div id="map-container" class="hidden" style="background: #34495e; color: white; padding: 20px; border-radius: 5px; margin: 20px auto; width: 80%; text-align: center; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
             <h2>Mapa postupu</h2>
             <div id="nodes-list" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 15px;"></div>
         </div>
 
-        <div id="battle-hud" style="display: none;">
+        <div id="battle-hud" class="hidden">
             <div id="enemies-container" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;"></div>
             
             <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto; border: 1px solid #34495e;">
@@ -74,7 +74,7 @@
             </div>
         </div>
 
-        <div id="shop-screen" style="display: none; background: #34495e; color: white; padding: 20px; border-radius: 5px; margin: 20px auto; width: 80%; text-align: center;">
+        <div id="shop-screen" class="hidden" style="background: #34495e; color: white; padding: 20px; border-radius: 5px; margin: 20px auto; width: 80%; text-align: center;">
             <h2 style="color: #f1c40f;">🛒 Vítej u Obchodníka!</h2>
             <p>Máš: <strong id="shop-gold" style="color: #f1c40f;">0</strong> 💰</p>
             <h3 style="margin-top: 20px; border-bottom: 1px solid #7f8c8d; padding-bottom: 5px;">Relikvie na prodej</h3>
@@ -87,13 +87,13 @@
             <button onclick="leaveShop()" style="margin-top: 20px; padding: 10px 30px; background: #95a5a6; border: none; color: white; cursor: pointer; border-radius: 5px;">Odejít z obchodu</button>
         </div>
 
-        <div id="event-screen" style="display: none; background: #2c3e50; color: white; padding: 30px; border-radius: 5px; margin: 20px auto; width: 60%; text-align: center; border: 2px solid #8e44ad; box-shadow: 0 0 20px rgba(142, 68, 173, 0.5);">
+        <div id="event-screen" class="hidden" style="background: #2c3e50; color: white; padding: 30px; border-radius: 5px; margin: 20px auto; width: 60%; text-align: center; border: 2px solid #8e44ad; box-shadow: 0 0 20px rgba(142, 68, 173, 0.5);">
             <h2 id="event-title" style="color: #9b59b6; margin-top: 0;">Záhadná Událost</h2>
             <p id="event-desc" style="font-size: 18px; line-height: 1.5; margin-bottom: 30px;">Zde bude text události...</p>
             <div id="event-options" style="display: flex; flex-direction: column; gap: 15px; align-items: center;"></div>
         </div>
 
-        <div id="rest-screen" style="display: none; background: #2c3e50; color: white; padding: 30px; border-radius: 5px; margin: 20px auto; width: 60%; text-align: center; border: 2px solid #e67e22; box-shadow: 0 0 20px rgba(230, 126, 34, 0.5);">
+        <div id="rest-screen" class="hidden" style="background: #2c3e50; color: white; padding: 30px; border-radius: 5px; margin: 20px auto; width: 60%; text-align: center; border: 2px solid #e67e22; box-shadow: 0 0 20px rgba(230, 126, 34, 0.5);">
             <h2 style="color: #e67e22; margin-top: 0;">⛺ Táborák</h2>
             <p style="font-size: 18px; margin-bottom: 30px;">Vyber si, zda si chceš odpočinout a nabrat síly, nebo vylepšit kartu. (Každá karta jde vylepšit jen jednou)</p>
             <div style="display: flex; justify-content: center; gap: 20px;">
@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <div id="reward-screen" style="display: none; text-align: center; color: white; margin-top: 20px;">
+        <div id="reward-screen" class="hidden" style="text-align: center; color: white; margin-top: 20px;">
             <h2 style="color: #f1c40f;">🎉 Vítězství! Získáváš kořist:</h2>
             <p>Získáno: <strong id="reward-gold" style="color: #f1c40f;">0</strong> 💰</p>
             <div id="relic-reward-container" style="margin: 20px auto; padding: 15px; background: rgba(241, 196, 15, 0.2); border: 2px dashed #f1c40f; border-radius: 8px; width: 60%; display: none;">
@@ -115,7 +115,7 @@
             <button onclick="skipReward()" style="margin-top: 30px; padding: 10px 20px; background: #95a5a6; border: none; color: white; cursor: pointer; border-radius: 5px;">Přeskočit odměnu karet</button>
         </div>
 
-        <div id="hand-wrapper" style="display: none; width: 80%; margin: 20px auto; text-align: center; box-sizing: border-box;">
+        <div id="hand-wrapper" class="hidden" style="width: 80%; margin: 20px auto; text-align: center; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between; width: 100%; margin: 0 auto; color: white; font-weight: bold; font-size: 16px; background: #34495e; padding: 10px; border-radius: 5px;">
                 <div id="deck-count" style="cursor: pointer; text-decoration: underline;" onclick="showDrawPile()">🎴 V balíčku: ?</div>
                 <div id="discard-count" style="cursor: pointer; text-decoration: underline;" onclick="showDiscardPile()">🗑️ Odhozeno: ?</div>
@@ -130,17 +130,31 @@
             <ul id="log" style="background: #f9f9f9; color: #333; padding: 15px; border-radius: 5px; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; text-align: left; font-family: monospace;"></ul>
         </div>
         
-    </div> <div id="card-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column;">
+    </div> <div id="card-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column;">
         <h2 id="card-modal-title" style="color: white; margin-bottom: 20px; font-size: 28px;">Karty</h2>
         <div id="card-modal-content" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 90%; max-height: 70%; overflow-y: auto; background: #2c3e50; padding: 20px; border-radius: 10px;"></div>
         <button onclick="closeCardModal()" style="margin-top: 30px; padding: 15px 40px; font-size: 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">❌ Zavřít</button>
     </div>
 
-    <div id="upgrade-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column;">
+    <div id="upgrade-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column;">
         <h2 style="color: #e67e22; margin-bottom: 20px; font-size: 28px;">Vyber kartu k vylepšení</h2>
         <div id="upgrade-modal-content" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 90%; max-height: 70%; overflow-y: auto; background: #2c3e50; padding: 20px; border-radius: 10px; border: 2px solid #e67e22;"></div>
         <button onclick="closeUpgradeModal()" style="margin-top: 30px; padding: 15px 40px; font-size: 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">❌ Zpět k táboráku</button>
     </div>
+
+    <script>
+        // Skryje všechny podokna hned při načtení
+        document.addEventListener("DOMContentLoaded", () => {
+            const elementsToHide = ["waiting-screen", "game-screen", "map-container", "battle-hud", "shop-screen", "event-screen", "rest-screen", "reward-screen", "hand-wrapper", "card-modal", "upgrade-modal"];
+            elementsToHide.forEach(id => {
+                let el = document.getElementById(id);
+                if(el) {
+                    el.classList.add("hidden");
+                    el.style.display = "none";
+                }
+            });
+        });
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script src="js/game.js"></script>

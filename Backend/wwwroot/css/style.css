@@ -3,7 +3,7 @@
 ========================================= */
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    background-color: #1e272e; /* Trochu tmavší, atmosféričtější pozadí */
+    background-color: #1e272e; 
     color: white; 
     text-align: center; 
     margin: 0;
@@ -11,7 +11,12 @@ body {
     overflow-x: hidden;
 }
 
-/* Vlastní hezčí scrollbar pro log a celou stránku */
+/* Bezpečnostní třída pro garanci skrytí prvků */
+.hidden { 
+    display: none !important; 
+}
+
+/* Vlastní hezčí scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -29,27 +34,23 @@ body {
 /* =========================================
    ANIMACE (KEYFRAMES)
 ========================================= */
-/* Animace jemného vznášení (pro postavy a nepřátele) */
 @keyframes float {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-6px); }
     100% { transform: translateY(0px); }
 }
 
-/* Pulzování aktivních bodů na mapě */
 @keyframes pulse-green {
     0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
     70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }
     100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
 }
 
-/* Plynulé zobrazení nových UI prvků */
 @keyframes fadeInScale {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
 }
 
-/* Animace nových zpráv v logu */
 @keyframes slideInLeft {
     from { opacity: 0; transform: translateX(-20px); }
     to { opacity: 1; transform: translateX(0); }
@@ -58,7 +59,7 @@ body {
 /* =========================================
    UI KONTEJNERY (Herní okna)
 ========================================= */
-#battle-hud, #map-container, #reward-screen, #hand-wrapper, #team-container {
+#battle-hud, #map-container, #reward-screen, #hand-wrapper, #team-container, #shop-screen, #event-screen, #rest-screen {
     animation: fadeInScale 0.4s ease-out forwards;
 }
 
@@ -79,7 +80,6 @@ body {
     z-index: 10;
 }
 
-/* Jemný lesk po najetí na kartu */
 .card::after {
     content: '';
     position: absolute;
@@ -93,12 +93,11 @@ body {
 }
 
 /* =========================================
-   TÝM (SPOLUHRÁČI)
+   TÝM A NEPŘÁTELÉ (Dýchání / Vznášení)
 ========================================= */
 #team-container > div {
     transition: all 0.3s ease;
     border: 2px solid rgba(255,255,255,0.1);
-    /* Přidáme jemné dýchání hrdinům */
     animation: float 4s ease-in-out infinite;
 }
 
@@ -108,25 +107,14 @@ body {
     border-color: rgba(255,255,255,0.5);
 }
 
-/* =========================================
-   NEPŘÁTELÉ (BATTLE HUD)
-========================================= */
 #enemies-container > div {
     transition: all 0.3s ease;
     border: 2px solid #e74c3c;
-    /* Rychlejší a agresivnější vznášení pro nepřátele */
     animation: float 2.5s ease-in-out infinite alternate;
 }
 
-/* Každý další nepřítel se vznáší trochu jinak (aby neskákali všichni stejně) */
-#enemies-container > div:nth-child(even) {
-    animation-delay: 0.5s;
-    animation-duration: 3s;
-}
-#enemies-container > div:nth-child(3n) {
-    animation-delay: 1s;
-    animation-duration: 2.2s;
-}
+#enemies-container > div:nth-child(even) { animation-delay: 0.5s; animation-duration: 3s; }
+#enemies-container > div:nth-child(3n) { animation-delay: 1s; animation-duration: 2.2s; }
 
 #enemies-container > div:hover {
     transform: scale(1.05) translateY(-5px);
@@ -142,9 +130,8 @@ body {
     transition: all 0.3s ease !important;
 }
 
-/* Tlačítka, na která LZE kliknout (nejsou hotová) */
 #nodes-list button:not([disabled]) {
-    animation: pulse-green 2s infinite; /* Pulzování */
+    animation: pulse-green 2s infinite; 
 }
 
 #nodes-list button:not([disabled]):hover {
@@ -153,25 +140,22 @@ body {
     z-index: 5;
 }
 
-/* Uzly, které už jsou hotové (šedé) */
 #nodes-list button[disabled] {
     opacity: 0.6;
     filter: grayscale(100%);
 }
 
-/* Šipky mezi uzly na mapě */
 #nodes-list div {
     animation: fadeInScale 0.5s ease-out;
 }
 
 /* =========================================
-   LIŠTY (KARMA, MANA, ZLATO)
+   OSTATNÍ PRVKY
 ========================================= */
 #karma-bar {
     transition: all 0.5s ease;
 }
 
-/* Tlačítka hrdinů v Lobby */
 .hero-btn { 
     padding: 10px 20px; 
     font-size: 16px; 
@@ -188,15 +172,13 @@ body {
     box-shadow: 0 5px 10px rgba(26, 188, 156, 0.4);
 }
 
-/* =========================================
-   LOGOVACÍ OKNO (HISTORIE UDÁLOSTÍ)
-========================================= */
+/* LOGOVACÍ OKNO */
 #log { 
     list-style-type: none; 
     padding: 15px; 
     margin: 0; 
     text-align: left; 
-    background: #2c3e50 !important; /* Tmavé pozadí pro log */
+    background: #2c3e50 !important; 
     color: #ecf0f1 !important;
     border: 1px solid #34495e !important;
 }
