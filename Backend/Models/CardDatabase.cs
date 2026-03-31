@@ -8,8 +8,8 @@ namespace RoguelikeCardGame.Models
         public static Dictionary<string, CardTemplate> Cards = new Dictionary<string, CardTemplate>
         {
             // --- ZÁKLADNÍ KARTY (Startovní pro většinu) ---
-            { "Z_Uder", new CardTemplate("Z_Uder", "Základní úder", "Udělí 5 zranění.", 5, 0, 0, -1) },
-            { "Z_Obrana", new CardTemplate("Z_Obrana", "Základní blok", "Přidá 5 bloku.", 0, 5, 0, 1) },
+            { "Z_Uder", new CardTemplate("Z_Uder", "Základní úder", "Udělí 5 zranění.", cost: 1, damage: 5) },
+            { "Z_Obrana", new CardTemplate("Z_Obrana", "Základní blok", "Přidá 5 bloku.", cost: 1, block: 5) },
 
             // ==========================================
             // 1. PALADIN (SVĚTLONOŠ) - 50 UNIKÁTNÍCH KARET
@@ -57,7 +57,7 @@ namespace RoguelikeCardGame.Models
             { "P_35", new CardTemplate("P_35", "Zlatý prach", "Vyléčí 2 HP, přidá 2 blok. Stojí 0.", cost: 0, heal: 2, block: 2) },
             { "P_36", new CardTemplate("P_36", "Záře", "Vyléčí 7 HP, lízni 1 kartu. Karma +1.", cost: 2, heal: 7, drawCards: 1, karmaShift: 1) },
             { "P_37", new CardTemplate("P_37", "Božský klid", "Karma +4 za 0 energie.", cost: 0, karmaShift: 4) },
-            { "P_38", new CardTemplate("P_38", "Svatá oběť", "Udělí ti zranění (později), vyléčí 15 HP. Karma +2.", cost: 1, heal: 15, karmaShift: 2) }, // Sebezranění nasimulujeme později
+            { "P_38", new CardTemplate("P_38", "Svatá oběť", "Udělí ti zranění (později), vyléčí 15 HP. Karma +2.", cost: 1, heal: 15, karmaShift: 2) }, 
             { "P_39", new CardTemplate("P_39", "Znovuzrození", "Vyléčí 25 HP. Karma +4.", cost: 3, heal: 25, karmaShift: 4) },
             { "P_40", new CardTemplate("P_40", "Sjednocení", "Vyléčí 4 HP, přidá 4 blok, lízni 1 kartu.", cost: 2, heal: 4, block: 4, drawCards: 1) },
 
@@ -70,7 +70,7 @@ namespace RoguelikeCardGame.Models
             { "P_46", new CardTemplate("P_46", "Aura vykoupení", "Přidá 15 bloku, vyléčí 10 HP. Karma +4.", cost: 3, block: 15, heal: 10, karmaShift: 4) },
             { "P_47", new CardTemplate("P_47", "Kázání", "Lízni 2 karty. Přidá 5 bloku.", cost: 1, drawCards: 2, block: 5) },
             { "P_48", new CardTemplate("P_48", "Proroctví", "Lízni 4 karty! Karma 0.", cost: 2, drawCards: 4) },
-            { "P_49", new CardTemplate("P_49", "Zásah shůry", "Udělí 30 zranění! Karma +5.", cost: 4, damage: 30, karmaShift: 5) }, // Vyžaduje extra energii
+            { "P_49", new CardTemplate("P_49", "Zásah shůry", "Udělí 30 zranění! Karma +5.", cost: 4, damage: 30, karmaShift: 5) }, 
             { "P_50", new CardTemplate("P_50", "Absolutní světlo", "Vyléčí 15 HP, přidá 15 bloku, udělí 15 zranění. Karma +5.", cost: 5, heal: 15, block: 15, damage: 15, karmaShift: 5) },
 
             // ==========================================
@@ -236,7 +236,7 @@ namespace RoguelikeCardGame.Models
             { "B_30", new CardTemplate("B_30", "Zatnutí zubů", "Přidá 15 bloku. Karma -2.", cost: 2, block: 15, karmaShift: -2) },
             { "B_31", new CardTemplate("B_31", "Krvavý štít", "Přidá 8 bloku, lízni 1 kartu. Karma -1.", cost: 1, block: 8, drawCards: 1, karmaShift: -1) },
             { "B_32", new CardTemplate("B_32", "Šílenství", "Lízni 4 karty! Karma -3.", cost: 2, drawCards: 4, karmaShift: -3) },
-            { "B_33", new CardTemplate("B_33", "Druhej dech", "Vyléčí 10 HP. Karma +1.", cost: 1, heal: 10, karmaShift: 1) }, // Výjimečná léčba
+            { "B_33", new CardTemplate("B_33", "Druhej dech", "Vyléčí 10 HP. Karma +1.", cost: 1, heal: 10, karmaShift: 1) }, 
             { "B_34", new CardTemplate("B_34", "Řev", "Lízni 2 karty, Karma -2.", cost: 1, drawCards: 2, karmaShift: -2) },
             { "B_35", new CardTemplate("B_35", "Tlustá kůže", "Přidá 12 bloku. Karma 0.", cost: 2, block: 12, karmaShift: 0) },
             { "B_36", new CardTemplate("B_36", "Zběsilost", "Lízni 2 karty. Stojí 0.", cost: 0, drawCards: 2) },
@@ -329,7 +329,7 @@ namespace RoguelikeCardGame.Models
             { "R_07", new CardTemplate("R_07", "Přepadení", "Udělí 6 zranění za 0 energie! Karma -2.", cost: 0, damage: 6, karmaShift: -2) },
             { "R_08", new CardTemplate("R_08", "Skrytá čepel", "Udělí 4 zranění. Stojí 0. Karma -1.", cost: 0, damage: 4, karmaShift: -1) },
             { "R_09", new CardTemplate("R_09", "Přeseknutí žil", "Udělí 7 zranění. Karma -1.", cost: 1, damage: 7, karmaShift: -1) },
-            { "R_10", new CardTemplate("R_10", "Zářivý klam", "Udělí 5 zranění. Karma +2.", cost: 1, damage: 5, karmaShift: 2) }, // Klamný útok do Světla
+            { "R_10", new CardTemplate("R_10", "Zářivý klam", "Udělí 5 zranění. Karma +2.", cost: 1, damage: 5, karmaShift: 2) }, 
             { "R_11", new CardTemplate("R_11", "Smrtící pirueta", "Udělí 4 zranění všem. Karma -2.", cost: 2, damage: 4, karmaShift: -2) },
             { "R_12", new CardTemplate("R_12", "Podříznutí", "Udělí 15 zranění. Karma -3.", cost: 2, damage: 15, karmaShift: -3) },
             { "R_13", new CardTemplate("R_13", "Krvavé kombo", "Udělí 6 zranění dvakrát. Karma -2.", cost: 2, damage: 6, hitCount: 2, karmaShift: -2) },
@@ -344,14 +344,14 @@ namespace RoguelikeCardGame.Models
             // --- Úhyby, Lízání a Extrémní výkyvy Karmy (21-40) ---
             { "R_21", new CardTemplate("R_21", "Úhyb", "Přidá 6 bloku. Karma +3.", cost: 1, block: 6, karmaShift: 3) },
             { "R_22", new CardTemplate("R_22", "Kouřová clona", "Přidá 8 bloku, lízni 1 kartu. Karma +2.", cost: 1, block: 8, drawCards: 1, karmaShift: 2) },
-            { "R_23", new CardTemplate("R_23", "Příprava", "Lízni 3 karty! Stojí 0! Karma 0.", cost: 0, drawCards: 3, karmaShift: 0) }, // Extrémně silná karta pro komba
+            { "R_23", new CardTemplate("R_23", "Příprava", "Lízni 3 karty! Stojí 0! Karma 0.", cost: 0, drawCards: 3, karmaShift: 0) }, 
             { "R_24", new CardTemplate("R_24", "Akrobacie", "Přidá 4 bloku, lízni 2 karty. Karma +1.", cost: 1, block: 4, drawCards: 2, karmaShift: 1) },
             { "R_25", new CardTemplate("R_25", "Stíny", "Přidá 10 bloku. Karma -2.", cost: 1, block: 10, karmaShift: -2) },
             { "R_26", new CardTemplate("R_26", "Salto vzad", "Přidá 5 bloku, Karma +4.", cost: 1, block: 5, karmaShift: 4) },
             { "R_27", new CardTemplate("R_27", "Adrenalinový skok", "Lízni 2 karty. Karma +2.", cost: 1, drawCards: 2, karmaShift: 2) },
             { "R_28", new CardTemplate("R_28", "Bleskové reflexy", "Přidá 15 bloku! Karma +3.", cost: 2, block: 15, karmaShift: 3) },
-            { "R_29", new CardTemplate("R_29", "Splynutí se stínem", "Karma -4 za 0 energie.", cost: 0, karmaShift: -4) }, // Čistá manipulace
-            { "R_30", new CardTemplate("R_30", "Výstup na světlo", "Karma +4 za 0 energie.", cost: 0, karmaShift: 4) }, // Čistá manipulace
+            { "R_29", new CardTemplate("R_29", "Splynutí se stínem", "Karma -4 za 0 energie.", cost: 0, karmaShift: -4) }, 
+            { "R_30", new CardTemplate("R_30", "Výstup na světlo", "Karma +4 za 0 energie.", cost: 0, karmaShift: 4) }, 
             { "R_31", new CardTemplate("R_31", "Soustředění", "Lízni 2 karty, vyléčí 2 HP. Karma 0.", cost: 1, drawCards: 2, heal: 2, karmaShift: 0) },
             { "R_32", new CardTemplate("R_32", "Útěk", "Přidá 12 bloku. Karma +2.", cost: 2, block: 12, karmaShift: 2) },
             { "R_33", new CardTemplate("R_33", "Hra se smrtí", "Lízni 4 karty. Karma -3.", cost: 1, drawCards: 4, karmaShift: -3) },
@@ -465,10 +465,10 @@ namespace RoguelikeCardGame.Models
             // --- Ohnivé štíty, Lízání a Manipulace hořením (21-40) ---
             { "Py_21", new CardTemplate("Py_21", "Ohnivý štít", "Přidá 8 bloku, udělí 3 zranění. Karma -1.", cost: 1, block: 8, damage: 3, karmaShift: -1) },
             { "Py_22", new CardTemplate("Py_22", "Zeď plamenů", "Přidá 12 bloku. Karma -2.", cost: 2, block: 12, karmaShift: -2) },
-            { "Py_23", new CardTemplate("Py_23", "Kauterizace", "Vyléčí 6 HP, ale Karma -2.", cost: 1, heal: 6, karmaShift: -2) }, // Ohnivé léčení bolí Karmu
+            { "Py_23", new CardTemplate("Py_23", "Kauterizace", "Vyléčí 6 HP, ale Karma -2.", cost: 1, heal: 6, karmaShift: -2) }, 
             { "Py_24", new CardTemplate("Py_24", "Rozdmýchání", "Lízni 2 karty. Karma -1.", cost: 1, drawCards: 2, karmaShift: -1) },
             { "Py_25", new CardTemplate("Py_25", "Krmení ohně", "Lízni 3 karty! Karma -2.", cost: 1, drawCards: 3, karmaShift: -2) },
-            { "Py_26", new CardTemplate("Py_26", "Teplo domova", "Vyléčí 4 HP, přidá 4 blok. Karma +1.", cost: 1, heal: 4, block: 4, karmaShift: 1) }, // Výjimečné světlo
+            { "Py_26", new CardTemplate("Py_26", "Teplo domova", "Vyléčí 4 HP, přidá 4 blok. Karma +1.", cost: 1, heal: 4, block: 4, karmaShift: 1) }, 
             { "Py_27", new CardTemplate("Py_27", "Dým", "Přidá 6 bloku za 0 energie. Karma -1.", cost: 0, block: 6, karmaShift: -1) },
             { "Py_28", new CardTemplate("Py_28", "Uhašení", "Přidá 10 bloku. Karma 0.", cost: 1, block: 10, karmaShift: 0) },
             { "Py_29", new CardTemplate("Py_29", "Přísun kyslíku", "Lízni 2 karty. Stojí 0. Karma -1.", cost: 0, drawCards: 2, karmaShift: -1) },
@@ -496,7 +496,5 @@ namespace RoguelikeCardGame.Models
             { "Py_49", new CardTemplate("Py_49", "Armagedon", "Udělí 60 zranění! Karma -8.", cost: 5, damage: 60, karmaShift: -8) },
             { "Py_50", new CardTemplate("Py_50", "Konečný plamen", "Udělí 100 zranění, ale stojí veškerou energii a Karmu! Karma -10.", cost: 5, damage: 100, karmaShift: -10) },
         };
-
-       
     }
 }
