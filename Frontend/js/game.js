@@ -20,6 +20,9 @@ let myHp = 0;
 let myMaxHp = 0;
 let myBlock = 0;
 
+// NOVÉ: Sleduje, na jakém políčku mapy stojíme (-1 znamená start)
+let myCurrentNodeId = -1;
+
 // --- 1. LOBBY A PŘIPOJENÍ ---
 function pickHero(hero) {
     playerClass = hero;
@@ -89,7 +92,8 @@ connection.on("GameStarted", (roomName, initialMap) => {
     document.getElementById("game-screen").style.display = "block";
     
     gameMap = initialMap;
-    logMessage(`🔥 Hra začala! Otevřete mapu a vyberte první místnost.`);
+    myCurrentNodeId = -1; // Na začátku mapy ještě nikde nestojíme
+    logMessage(`🔥 Hra začala! Vyberte si startovní políčko na dně mapy.`);
     toggleUI("map");
     renderMap();
 });
@@ -114,12 +118,11 @@ connection.on("UpdateRelics", (relicsList) => {
     });
 });
 
-// NOVÉ: Přijímání stavů všech hráčů z týmu
 connection.on("UpdateTeamStats", (teamData) => {
     renderTeam(teamData);
 });
 
-// --- 3. BITEVNÍ SYSTÉM (Více nepřátel) ---
+// --- 3. BITEVNÍ SYSTÉM ---
 connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawCount, discardCount, hp, maxHp, block) => {
     cardDatabase = serverCards; 
     myHand = hand;
@@ -163,7 +166,7 @@ connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, dra
     myBlock = block || 0;
     
     turnEnded = false; 
-    logMessage(`🔄 Začíná tvůj nový tah! Dobrány karty do 3.`);
+    logMessage(`🔄 Začíná tvůj nový tah! Ruka byla zahozena, dobíráš 5 nových karet.`);
     
     document.getElementById("end-turn-btn").disabled = false;
     document.getElementById("end-turn-btn").style.backgroundColor = "#8e44ad";
@@ -175,11 +178,18 @@ connection.on("ReceiveNewTurnState", (updatedHand, updatedMana, updatedGold, dra
 
 connection.on("EnteredNode", (nodeType, nodeData, enemiesArray) => {
     logMessage(`📍 Vstupujete do: ${nodeType}`);
+    myCurrentNodeId = nodeData.id; // Zapsání aktuální polohy pro mapu
     
     if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") {
         renderEnemies(enemiesArray);
         toggleUI("battle");
-    } else if (nodeType === "Treasure" || nodeType === "RestPlace") {
+    } else {
+        // Zde by později bylo UI pro Shop, Rest atd.
+        logMessage(`⏳ Návštěva: ${nodeType}. Zatím přeskočeno.`);
+        
+        let mapNode = gameMap.find(n => n.id === nodeData.id);
+        if(mapNode) mapNode.isCompleted = true;
+        
         toggleUI("map");
         renderMap();
     }
@@ -314,7 +324,6 @@ function skipReward() {
 
 // --- 5. VYKRESLOVÁNÍ UI ---
 
-// NOVÉ: Vykreslení celého týmu
 function renderTeam(teamData) {
     const container = document.getElementById("team-container");
     if (!container) return;
@@ -324,7 +333,6 @@ function renderTeam(teamData) {
         const isMe = player.name === playerName;
         const div = document.createElement("div");
         
-        // Zelená pro tebe, modrá pro ostatní spoluhráče
         div.style.background = isMe ? "#27ae60" : "#2980b9";
         div.style.color = "white";
         div.style.padding = "8px 15px";
@@ -464,39 +472,7 @@ function toggleUI(state) {
     }
 }
 
-// Globální proměnná pro aktuální polohu (pro UI mapy)
-let myCurrentNodeId = -1;
-
-connection.on("GameStarted", (roomName, initialMap) => {
-    document.getElementById("waiting-screen").style.display = "none";
-    document.getElementById("game-screen").style.display = "block";
-    
-    gameMap = initialMap;
-    myCurrentNodeId = -1; // Reset při nové hře
-    logMessage(`🔥 Hra začala! Vyberte si startovní políčko na dně mapy.`);
-    toggleUI("map");
-    renderMap();
-});
-
-connection.on("EnteredNode", (nodeType, nodeData, enemiesArray) => {
-    logMessage(`📍 Vstupujete do: ${nodeType}`);
-    myCurrentNodeId = nodeData.id; // Uložíme aktuální pozici
-    
-    if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") {
-        renderEnemies(enemiesArray);
-        toggleUI("battle");
-    } else {
-        // Shop, RestPlace, Event, Treasure
-        logMessage(`⏳ Návštěva: ${nodeType}. Brzy zde bude UI. Zatím pokračujeme.`);
-        // Označíme lokálně jako completed
-        let mapNode = gameMap.find(n => n.id === nodeData.id);
-        if(mapNode) mapNode.isCompleted = true;
-        
-        toggleUI("map");
-        renderMap();
-    }
-});
-// --- VYLEPŠENÁ MAPA (Stromová struktura s čarami) ---
+// --- VYLEPŠENÁ MAPA S ČARAMI ---
 function renderMap() {
     const mapContainer = document.getElementById("nodes-list");
     if (!mapContainer) return;
@@ -504,15 +480,13 @@ function renderMap() {
     mapContainer.innerHTML = "";
     mapContainer.style.position = "relative";
     mapContainer.style.display = "flex";
-    mapContainer.style.flexDirection = "column-reverse"; // Odspodu nahoru
+    mapContainer.style.flexDirection = "column-reverse"; 
     mapContainer.style.gap = "40px";
     mapContainer.style.padding = "20px";
 
-    // 1. Zjistíme, v jakém uzlu stojíme
     let currentNode = gameMap.find(n => n.id === myCurrentNodeId);
     let validNextNodeIds = currentNode ? currentNode.connectedTo : [];
 
-    // 2. Seskupíme uzly podle pater (Floors)
     const maxFloor = Math.max(...gameMap.map(n => n.floor));
     
     for (let f = 0; f <= maxFloor; f++) {
@@ -522,7 +496,7 @@ function renderMap() {
         row.style.display = "flex";
         row.style.justifyContent = "center";
         row.style.gap = "60px";
-        row.style.zIndex = "2"; // Nad čarami
+        row.style.zIndex = "2"; 
         
         floorNodes.forEach(node => {
             const btn = document.createElement("button");
@@ -549,18 +523,15 @@ function renderMap() {
             btn.style.position = "relative";
             btn.style.transition = "all 0.2s";
             
-            // Logika povolení kliknutí (Jen aktuálně napojená patra nebo start)
             let isClickable = false;
-            if (myCurrentNodeId === -1 && node.floor === 0) isClickable = true; // První volba
-            if (validNextNodeIds.includes(node.id) && !node.isCompleted) isClickable = true; // Další krok
+            if (myCurrentNodeId === -1 && node.floor === 0) isClickable = true; 
+            if (validNextNodeIds.includes(node.id) && !node.isCompleted) isClickable = true; 
 
             if (node.isCompleted || myCurrentNodeId === node.id) {
-                // Prošlé nebo aktuální
                 btn.style.backgroundColor = (myCurrentNodeId === node.id) ? "#f39c12" : "#7f8c8d"; 
                 btn.style.borderColor = "#95a5a6";
                 btn.disabled = true;
             } else if (isClickable) {
-                // Dostupné další kroky
                 btn.style.backgroundColor = "#2ecc71"; 
                 btn.style.cursor = "pointer";
                 btn.style.boxShadow = "0 0 15px rgba(46, 204, 113, 0.8)";
@@ -570,7 +541,6 @@ function renderMap() {
                     connection.invoke("MoveToNextNode", currentRoomName, node.id).catch(err => console.error(err));
                 };
             } else {
-                // Vzdálená budoucnost
                 btn.style.backgroundColor = "#34495e";
                 btn.style.opacity = "0.5";
                 btn.disabled = true;
@@ -581,12 +551,10 @@ function renderMap() {
         mapContainer.appendChild(row);
     }
 
-    // 3. Vykreslení spojovacích čar (SVG) po vložení do DOMu
     setTimeout(() => drawMapLines(mapContainer), 100);
 }
 
 function drawMapLines(container) {
-    // Odstraní staré plátno, pokud existuje
     let oldSvg = document.getElementById("map-svg");
     if (oldSvg) oldSvg.remove();
 
@@ -612,7 +580,6 @@ function drawMapLines(container) {
             if (!toEl) return;
             const toRect = toEl.getBoundingClientRect();
 
-            // Výpočet pozic relativně ke kontejneru
             const x1 = (fromRect.left + fromRect.width / 2) - containerRect.left;
             const y1 = (fromRect.top + fromRect.height / 2) - containerRect.top;
             const x2 = (toRect.left + toRect.width / 2) - containerRect.left;
@@ -626,7 +593,6 @@ function drawMapLines(container) {
             line.setAttribute("stroke", "rgba(255, 255, 255, 0.3)");
             line.setAttribute("stroke-width", "3");
 
-            // Zvýrazníme čáru, pokud je to naše dostupná cesta
             if (myCurrentNodeId === node.id || (myCurrentNodeId === -1 && node.floor === 0)) {
                  line.setAttribute("stroke", "rgba(46, 204, 113, 0.6)");
                  line.setAttribute("stroke-width", "5");
