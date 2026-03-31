@@ -23,7 +23,7 @@ namespace RoguelikeCardGame.Hubs
         private static ConcurrentDictionary<string, GameRoom> _activeRooms = new ConcurrentDictionary<string, GameRoom>();
         private static ConcurrentDictionary<string, List<ActiveEnemy>> _roomEnemies = new ConcurrentDictionary<string, List<ActiveEnemy>>();
 
-        // NOVÁ POMOCNÁ METODA: Sbírá HP a Štíty celého týmu a balí je do JSON listu
+        // Sběr dat o týmu pro vykreslování UI
         private object GetTeamStats(GameRoom room)
         {
             return room.Players.Select(p => new {
@@ -97,7 +97,8 @@ namespace RoguelikeCardGame.Hubs
                 foreach (var player in room.Players)
                 {
                     player.InitializeGame(); 
-                    player.DrawCards(3); 
+                    // OPRAVA: Startujeme s 5 kartami
+                    player.DrawCards(5); 
 
                     if (HeroDatabase.Heroes.TryGetValue(player.HeroClass, out var template) && template.StartingRelic != null)
                     {
@@ -111,55 +112,60 @@ namespace RoguelikeCardGame.Hubs
                 }
 
                 await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
-                
-                // NOVÉ ODESLÁNÍ STAVU TÝMU PŘI STARTU
                 await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
-                
                 await Clients.Group(roomName).SendAsync("GameStarted", roomName, room.Map);
             }
         }
 
+        // --- PŘESUN NA MAPĚ (OŠETŘENÍ CESTY A NÁHODNÍ NEPŘÁTELÉ) ---
         public async Task MoveToNextNode(string roomName, int nodeId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
             {
-                var nextNode = room.Map.FirstOrDefault(n => n.Id == nodeId);
-                if (nextNode != null)
+                var targetNode = room.Map.FirstOrDefault(n => n.Id == nodeId);
+                if (targetNode == null) return;
+
+                // --- 1. KONTROLA, ZDA JE UZEL DOSTUPNÝ ---
+                if (room.CurrentNodeId == -1) 
                 {
-                    room.CurrentNodeId = nodeId;
-                    var enemyList = new List<ActiveEnemy>();
-                    
-                    if (nextNode.Type == NodeType.Encounter || nextNode.Type == NodeType.EliteEncounter || nextNode.Type == NodeType.Boss)
+                    // První krok - musí být v 0. patře
+                    if (targetNode.Floor != 0) return; 
+                }
+                else
+                {
+                    // Další kroky - musí být propojený z aktuálního
+                    var currentNode = room.Map.FirstOrDefault(n => n.Id == room.CurrentNodeId);
+                    if (currentNode == null || !currentNode.ConnectedTo.Contains(nodeId)) return;
+                }
+
+                room.CurrentNodeId = nodeId;
+                var enemyList = new List<ActiveEnemy>();
+                
+                // --- 2. GENEROVÁNÍ LOKACE ---
+                if (targetNode.Type == NodeType.Encounter || targetNode.Type == NodeType.EliteEncounter || targetNode.Type == NodeType.Boss)
+                {
+                    Random rng = new Random();
+                    int enemyCount = targetNode.Type == NodeType.Encounter ? rng.Next(1, 5) : rng.Next(1, 3);
+                    string tier = targetNode.Type == NodeType.Boss ? "Boss" : (targetNode.Type == NodeType.EliteEncounter ? "Elite" : "Normal");
+
+                    for (int i = 0; i < enemyCount; i++)
                     {
-                        Random rng = new Random();
-                        int enemyCount = 1;
-
-                        if (nextNode.Type == NodeType.Encounter) enemyCount = rng.Next(1, 5); 
-                        else if (nextNode.Type == NodeType.EliteEncounter) enemyCount = rng.Next(1, 3); 
-                        
-                        string tier = nextNode.Type == NodeType.Boss ? "Boss" : (nextNode.Type == NodeType.EliteEncounter ? "Elite" : "Normal");
-
-                        for (int i = 0; i < enemyCount; i++)
-                        {
-                            var template = EnemyDatabase.GetRandomEnemy(tier, room.CurrentAct);
-                            var action = EnemyDatabase.GetRandomActionForEnemy(template.Name);
-                            
-                            enemyList.Add(new ActiveEnemy {
-                                Name = template.Name + (enemyCount > 1 ? $" {i + 1}" : ""),
-                                TemplateName = template.Name,
-                                MaxHp = template.MaxHp,
-                                Hp = template.MaxHp,
-                                CurrentAction = action
-                            });
-                        }
-
-                        _roomEnemies[roomName] = enemyList;
-                        await Clients.Group(roomName).SendAsync("EnteredNode", nextNode.Type.ToString(), nextNode, enemyList);
+                        var template = EnemyDatabase.GetRandomEnemy(tier, room.CurrentAct);
+                        enemyList.Add(new ActiveEnemy {
+                            Name = template.Name + (enemyCount > 1 ? $" {i + 1}" : ""),
+                            TemplateName = template.Name, MaxHp = template.MaxHp, Hp = template.MaxHp,
+                            CurrentAction = EnemyDatabase.GetRandomActionForEnemy(template.Name)
+                        });
                     }
-                    else
-                    {
-                        await Clients.Group(roomName).SendAsync("EnteredNode", nextNode.Type.ToString(), nextNode, new List<ActiveEnemy>());
-                    }
+
+                    _roomEnemies[roomName] = enemyList;
+                    await Clients.Group(roomName).SendAsync("EnteredNode", targetNode.Type.ToString(), targetNode, enemyList);
+                }
+                else
+                {
+                    // RestPlace, Shop, Treasure, Event
+                    targetNode.IsCompleted = true; // Rovnou označíme za splněné, protože tu ještě není minihra
+                    await Clients.Group(roomName).SendAsync("EnteredNode", targetNode.Type.ToString(), targetNode, new List<ActiveEnemy>());
                 }
             }
         }
@@ -272,9 +278,7 @@ namespace RoguelikeCardGame.Hubs
                     room.PlayedCardsThisTurn.Clear();
                     room.PlayersReady.Clear();
                     
-                    // NOVÉ: Rozešleme aktualizované stavy životů všech hráčů po vyhodnocení
                     await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
-                    
                     await Clients.Group(roomName).SendAsync("TurnResolved", summary, actualDamage, room.CurrentKarma, enemies);
                     
                     if (allDead)
@@ -291,7 +295,7 @@ namespace RoguelikeCardGame.Hubs
                             {
                                 var cardChoices = allCards.OrderBy(x => rng.Next()).Take(3).ToList();
                                 
-                                Relic? relicChoice = null; // Zde jsme prve opravovali CS8600 přidáním otazníku
+                                Relic? relicChoice = null; 
                                 if (currentNode.Type == NodeType.EliteEncounter || currentNode.Type == NodeType.Boss)
                                 {
                                     relicChoice = RelicDatabase.GetRandomRelic();
@@ -306,14 +310,14 @@ namespace RoguelikeCardGame.Hubs
                                 {
                                     room.CurrentAct = 2;
                                     foreach(var node in room.Map) { node.IsCompleted = false; }
-                                    room.CurrentNodeId = 0; 
+                                    room.CurrentNodeId = -1; // -1 resetuje startovní patro
                                     await Clients.Group(roomName).SendAsync("GameStarted", roomName, room.Map); 
                                 }
                                 else if (room.CurrentAct == 2)
                                 {
                                     room.CurrentAct = 3;
                                     foreach(var node in room.Map) { node.IsCompleted = false; }
-                                    room.CurrentNodeId = 0; 
+                                    room.CurrentNodeId = -1; 
                                     await Clients.Group(roomName).SendAsync("GameStarted", roomName, room.Map); 
                                 }
                                 else
@@ -335,8 +339,10 @@ namespace RoguelikeCardGame.Hubs
                             if (room.CurrentKarma >= 10) p.Block += 3;
                             else if (room.CurrentKarma <= -10) { p.Hp -= 1; if (p.Hp < 0) p.Hp = 0; }
                             
-                            int cardsToDraw = Math.Max(0, 3 - p.Hand.Count);
-                            p.DrawCards(cardsToDraw);
+                            // --- OPRAVA: Zahození zbylé ruky a dobití do 5 karet ---
+                            p.DiscardPile.AddRange(p.Hand);
+                            p.Hand.Clear();
+                            p.DrawCards(5);
 
                             await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", 
                                 p.Hand, p.Mana, p.Gold, p.DrawPile.Count, p.DiscardPile.Count, p.Hp, p.MaxHp, p.Block, enemies);
