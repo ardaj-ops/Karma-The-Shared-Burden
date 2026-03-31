@@ -284,7 +284,7 @@ namespace RoguelikeCardGame.Hubs
                                 // Každému hráči pošleme 3 náhodné karty na výběr
                                 var cardChoices = allCards.OrderBy(x => rng.Next()).Take(3).ToList();
                                 
-                                Relic relicChoice = null;
+                                Relic? relicChoice = null;
                                 if (currentNode.Type == NodeType.EliteEncounter || currentNode.Type == NodeType.Boss)
                                 {
                                     // Hráči dostanou i Relikvii
