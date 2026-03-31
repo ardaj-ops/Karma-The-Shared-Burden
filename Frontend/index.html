@@ -43,7 +43,21 @@
         <div id="battle-hud">
     <div id="enemies-container" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
         </div>
+    <div id="reward-screen" style="display: none; text-align: center; color: white; margin-top: 20px;">
+    <h2 style="color: #f1c40f;">🎉 Vítězství! Získáváš kořist:</h2>
     
+    <div id="relic-reward-container" style="margin: 20px auto; padding: 15px; background: rgba(241, 196, 15, 0.2); border: 2px dashed #f1c40f; border-radius: 8px; width: 60%; display: none;">
+        <h3>🏆 Získáváš Relikvii:</h3>
+        <strong id="reward-relic-name" style="font-size: 20px;">Neznámá relikvie</strong>
+        <p id="reward-relic-desc"></p>
+    </div>
+
+    <h3>Vyber si 1 kartu do svého balíčku:</h3>
+    <div id="card-reward-container" style="display: flex; justify-content: center; gap: 15px; margin-top: 20px;">
+        </div>
+    
+    <button onclick="skipReward()" style="margin-top: 30px; padding: 10px 20px; background: #95a5a6; border: none; color: white; cursor: pointer; border-radius: 5px;">Přeskočit odměnu</button>
+</div>
     <div style="display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto;">
         <div id="karma-bar">Společná Karma: <strong id="karma-value">0</strong> <span id="karma-status"> (Rovnováha ⚖️)</span></div>
         <div id="mana-bar" style="color: #3498db;">Tvoje Mana: <strong id="mana-value">0</strong> / 3</div>
