@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
-
+using RoguelikeCardGame.Hubs;
 namespace RoguelikeCardGame.Models
 {
     public static class RelicManager
