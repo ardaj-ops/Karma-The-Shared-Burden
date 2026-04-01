@@ -9,23 +9,31 @@ namespace RoguelikeCardGame.Models
         public string Name { get; set; } = string.Empty;
         
         // --- HRDINA A ŽIVOTY ---
-        // --- HRDINA A ŽIVOTY ---
-public string HeroClass { get; set; } = string.Empty;
-public int Hp { get; set; }           // Aktuální životy
-public int MaxHp { get; set; }        // Maximální životy
-public int Block { get; set; } = 0;   // NOVÉ: Štíty (Blok)
+        public string HeroClass { get; set; } = string.Empty;
+        public int Hp { get; set; }           // Aktuální životy
+        public int MaxHp { get; set; }        // Maximální životy
+        public int Block { get; set; } = 0;   // Štíty (Blok)
+
         // --- MANA SYSTÉM ---
         public int Mana { get; set; }
         public int MaxMana { get; set; } = 3;
 
-        // --- NOVÉ: EKONOMIKA ---
-        public int Gold { get; set; } = 50;   // Každý hráč začne s 50 zlaťáky
+        // --- EKONOMIKA ---
+        public int Gold { get; set; } = 50;
 
         // --- DECK SYSTÉM ---
         public List<string> StartingDeck { get; set; } = new List<string>();
         public List<string> DrawPile { get; set; } = new List<string>();
         public List<string> Hand { get; set; } = new List<string>();
         public List<string> DiscardPile { get; set; } = new List<string>();
+
+        // --- NOVÉ: SYSTÉM EFEKTŮ A KOMBA (Důležité pro RelicManager) ---
+        
+        // Slovník pro ukládání buffů a debuffů (např. "Strength", "Dexterity", "Poison")
+        public Dictionary<string, int> Effects { get; set; } = new Dictionary<string, int>();
+
+        // Počítadlo karet zahraných v tomto tahu (pro relikvie)
+        public int CardsPlayedThisTurn { get; set; } = 0;
 
         // Prázdný konstruktor (Důležité pro SignalR/Serializaci)
         public Player() { }
@@ -39,20 +47,35 @@ public int Block { get; set; } = 0;   // NOVÉ: Štíty (Blok)
 
         // --- FUNKCE PRO HRU ---
 
-        // 1. Připraví hru: nakopíruje balíček, vyčistí ruku, nastaví manu a životy
+        // Metoda pro přidání efektu (řeší chybu CS1061)
+        public void AddEffect(string type, int amount)
+        {
+            if (Effects.ContainsKey(type))
+            {
+                Effects[type] += amount;
+            }
+            else
+            {
+                Effects[type] = amount;
+            }
+        }
+
+        // Připraví hru: nakopíruje balíček, vyčistí ruku, nastaví manu a životy
         public void InitializeGame()
         {
             DrawPile = new List<string>(StartingDeck); 
             Hand.Clear();
             DiscardPile.Clear();
+            Effects.Clear();         // Vyčistit efekty na začátku hry
+            CardsPlayedThisTurn = 0; // Resetovat počítadlo komb
             
             Mana = MaxMana; 
-            Hp = MaxHp; // Na startu hry (v první místnosti) má hráč plné životy
+            Hp = MaxHp;
             
             ShuffleDeck();
         }
 
-        // 2. Zamíchá dobírací balíček (Fisher-Yates algoritmus)
+        // Zamíchá dobírací balíček (Fisher-Yates algoritmus)
         public void ShuffleDeck()
         {
             Random rng = new Random();
@@ -67,7 +90,7 @@ public int Block { get; set; } = 0;   // NOVÉ: Štíty (Blok)
             }
         }
 
-        // 3. Lízne zadaný počet karet do ruky
+        // Lízne zadaný počet karet do ruky
         public void DrawCards(int count)
         {
             for (int i = 0; i < count; i++)
@@ -82,7 +105,7 @@ public int Block { get; set; } = 0;   // NOVÉ: Štíty (Blok)
                     }
                     else
                     {
-                        break; // Už nejsou žádné karty k líznutí
+                        break; 
                     }
                 }
 
