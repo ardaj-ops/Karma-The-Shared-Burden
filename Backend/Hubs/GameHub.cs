@@ -16,6 +16,14 @@ namespace RoguelikeCardGame.Hubs
         public int Hp { get; set; }
         public int MaxHp { get; set; }
         public EnemyAction CurrentAction { get; set; } = new EnemyAction();
+
+        // NOVÉ: Paměť pro efekty nepřátel
+        public Dictionary<string, int> Effects { get; set; } = new Dictionary<string, int>();
+        public void AddEffect(string type, int amount)
+        {
+            if (Effects.ContainsKey(type)) Effects[type] += amount;
+            else Effects[type] = amount;
+        }
     }
 
     public class GameHub : Hub
@@ -87,7 +95,6 @@ namespace RoguelikeCardGame.Hubs
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
             {
-                // ZMĚNA: Sloučíme základní a vylepšené karty, abychom je odeslali frontendu
                 var combinedCards = new Dictionary<string, CardTemplate>(CardDatabase.Cards);
                 foreach (var kvp in UpgradedCardsDatabase.UpgradedCards)
                 {
@@ -105,7 +112,6 @@ namespace RoguelikeCardGame.Hubs
                         room.TeamRelics.Add(new Relic(template.StartingRelic.Id, $"{template.StartingRelic.Name} ({player.Name})", template.StartingRelic.Description));
                     }
 
-                    // Odesíláme combinedCards, takže JavaScript bude rovnou znát i vylepšené verze karet
                     await Clients.Client(player.ConnectionId).SendAsync("ReceiveInitialState", 
                         player.Hand, player.Mana, combinedCards, player.Gold, 
                         player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, player.StartingDeck);
@@ -157,9 +163,11 @@ namespace RoguelikeCardGame.Hubs
                 {
                     p.Mana = p.MaxMana;
                     p.Block = 0;
+                    p.Effects.Clear(); 
                     p.DiscardPile.AddRange(p.Hand);
                     p.Hand.Clear();
                     p.DrawCards(5);
+                    p.CardsPlayedThisTurn = 0; // Nová pomocná proměnná pro Relikvie
                 }
 
                 if (targetNode.Type == NodeType.Encounter || targetNode.Type == NodeType.EliteEncounter || targetNode.Type == NodeType.Boss)
@@ -178,8 +186,12 @@ namespace RoguelikeCardGame.Hubs
                     }
 
                     _roomEnemies[roomName] = enemyList;
+                    
                     foreach (var p in room.Players)
                     {
+                        RelicManager.ApplyCombatStartRelics(p, room, enemyList);
+                        RelicManager.ApplyTurnStartRelics(p, room);
+                        
                         await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, enemyList);
                     }
                     await Clients.Group(roomName).SendAsync("EnteredNode", targetNode.Type.ToString(), targetNode, enemyList);
@@ -270,6 +282,8 @@ namespace RoguelikeCardGame.Hubs
                     if (actionType == "heal")
                     {
                         int healAmount = (int)(p.MaxHp * 0.3);
+                        // ZMĚNA: Relikvie mohou upravit množství léčení v Táboráku
+                        healAmount = RelicManager.ApplyCampfireRelics(p, room, healAmount);
                         p.Hp += healAmount;
                         if (p.Hp > p.MaxHp) p.Hp = p.MaxHp;
                     }
@@ -359,12 +373,12 @@ namespace RoguelikeCardGame.Hubs
                 {
                     player.Hand.Remove(cardId);
                     player.DiscardPile.Add(cardId);
+                    player.CardsPlayedThisTurn++; // Pro relikvie počítající zahrané karty
                     
                     room.CurrentKarma += karmaShift;
                     
                     CardTemplate fullCard = null;
                     
-                    // ZMĚNA: Kontrola, jestli máme vylepšenou kartu v naší nové databázi
                     if (cardId.EndsWith("+") && UpgradedCardsDatabase.UpgradedCards.TryGetValue(cardId, out var upgCard))
                     {
                         fullCard = upgCard;
@@ -376,14 +390,14 @@ namespace RoguelikeCardGame.Hubs
                         {
                             if (cardId.EndsWith("+"))
                             {
-                                // Záchranný padák (generický buff), pokud uživatel kartu nevytvořil v UpgradedCardsDatabase
                                 fullCard = new CardTemplate(
                                     baseCard.Id + "+", "⭐ " + baseCard.Name, baseCard.Description + " (Vylepšeno)",
                                     Math.Max(0, baseCard.Cost - 1), 
+                                    baseCard.KarmaShift,
                                     baseCard.Damage > 0 ? baseCard.Damage + 3 : 0, 
                                     baseCard.Block > 0 ? baseCard.Block + 3 : 0, 
                                     baseCard.Heal > 0 ? baseCard.Heal + 2 : 0, 
-                                    baseCard.DrawCards, baseCard.KarmaShift, baseCard.HitCount
+                                    baseCard.DrawCards, baseCard.HitCount, baseCard.TargetEffects, baseCard.SelfEffects
                                 );
                             }
                             else
@@ -395,18 +409,71 @@ namespace RoguelikeCardGame.Hubs
 
                     if (fullCard != null)
                     {
-                        int block = fullCard.Block;
-                        int heal = fullCard.Heal;
+                        var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
+
+                        // ZMĚNA: Některé relikvie reagují přímo na zahrání karty (např. 10. zahraná karta dává Blok)
+                        RelicManager.ApplyCardPlayedRelics(player, room, fullCard);
+
+                        // --- 1. Aplikace Self Efektů ---
+                        foreach(var eff in fullCard.SelfEffects) player.AddEffect(eff.Type, eff.Amount);
+
+                        // --- 2. Zpracování Obrany ---
+                        int dex = player.Effects.ContainsKey(EffectType.Dexterity) ? player.Effects[EffectType.Dexterity] : 0;
+                        int block = fullCard.Block > 0 ? fullCard.Block + dex : 0;
                         
+                        block = RelicManager.ModifyBlock(block, player, room);
                         player.Block += block;
 
-                        if (heal > 0)
+                        // --- 3. Zpracování Léčení ---
+                        if (fullCard.Heal > 0)
                         {
                             var targetPlayer = string.IsNullOrEmpty(targetPlayerName) ? player : room.Players.FirstOrDefault(p => p.Name == targetPlayerName);
                             if (targetPlayer != null) 
                             {
-                                targetPlayer.Hp += heal;
+                                targetPlayer.Hp += fullCard.Heal;
                                 if (targetPlayer.Hp > targetPlayer.MaxHp) targetPlayer.Hp = targetPlayer.MaxHp;
+                                
+                                foreach(var eff in fullCard.TargetEffects) targetPlayer.AddEffect(eff.Type, eff.Amount);
+                            }
+                        }
+
+                        // --- 4. Zpracování Útoku ---
+                        if (fullCard.Damage > 0 || (fullCard.TargetEffects.Count > 0 && fullCard.Heal == 0))
+                        {
+                            var target = enemies.FirstOrDefault(e => e.Id == targetEnemyId && e.Hp > 0) ?? enemies.FirstOrDefault(e => e.Hp > 0); 
+
+                            if (target != null)
+                            {
+                                foreach(var eff in fullCard.TargetEffects) target.AddEffect(eff.Type, eff.Amount);
+
+                                if (fullCard.Damage > 0)
+                                {
+                                    int str = player.Effects.ContainsKey(EffectType.Strength) ? player.Effects[EffectType.Strength] : 0;
+                                    int baseDmg = fullCard.Damage + str;
+                                    
+                                    if (player.Effects.ContainsKey(EffectType.Weak) && player.Effects[EffectType.Weak] > 0) 
+                                        baseDmg = (int)(baseDmg * 0.75);
+
+                                    baseDmg = RelicManager.ModifyDamage(baseDmg, player, room);
+
+                                    double karmaMultiplier = 1.0;
+                                    if (room.CurrentKarma >= 10) karmaMultiplier = 0.8;
+                                    else if (room.CurrentKarma <= -10) karmaMultiplier = 1.3;
+
+                                    int actualDamage = (int)Math.Round(baseDmg * karmaMultiplier) * (fullCard.HitCount > 0 ? fullCard.HitCount : 1);
+                                    
+                                    if (target.Effects.ContainsKey(EffectType.Vulnerable) && target.Effects[EffectType.Vulnerable] > 0)
+                                        actualDamage = (int)(actualDamage * 1.5);
+
+                                    target.Hp -= actualDamage;
+                                    
+                                    // ZMĚNA: Zachycení smrti nepřítele pro Relikvie
+                                    if (target.Hp <= 0) 
+                                    {
+                                        target.Hp = 0;
+                                        RelicManager.OnEnemyKilled(player, room);
+                                    }
+                                }
                             }
                         }
 
@@ -418,26 +485,6 @@ namespace RoguelikeCardGame.Hubs
                             await Clients.Client(player.ConnectionId).SendAsync("ReceiveNewTurnState", 
                                 player.Hand, player.Mana, player.Gold, player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, enemiesForSync);
                         }
-                        
-                        // ZMĚNA: HitCount bereme nativně ze správné verze karty
-                        if (fullCard.Damage > 0)
-                        {
-                            double damageMultiplier = 1.0;
-                            if (room.CurrentKarma >= 10) damageMultiplier = 0.8;
-                            else if (room.CurrentKarma <= -10) damageMultiplier = 1.3;
-
-                            int actualDamage = (int)Math.Round(fullCard.Damage * damageMultiplier) * (fullCard.HitCount > 0 ? fullCard.HitCount : 1);
-                            
-                            var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
-                            var target = enemies.FirstOrDefault(e => e.Id == targetEnemyId && e.Hp > 0);
-                            if (target == null) target = enemies.FirstOrDefault(e => e.Hp > 0); 
-
-                            if (target != null)
-                            {
-                                target.Hp -= actualDamage;
-                                if (target.Hp <= 0) target.Hp = 0;
-                            }
-                        }
                     }
 
                     await Clients.Group(roomName).SendAsync("CardPlayedLog", playerName, cardId);
@@ -448,6 +495,31 @@ namespace RoguelikeCardGame.Hubs
                     await Clients.Group(roomName).SendAsync("TurnResolved", summaryForUI, fullCard?.Damage ?? 0, room.CurrentKarma, currentEnemies);
                 }
             }
+        }
+
+        // Pomocná metoda pro vyhodnocení efektů na konci kola
+        private void ProcessEffectsAtEndOfTurn(Dictionary<string, int> effects, ref int hp, ref int block, List<string> summary, string name)
+        {
+            if (effects.ContainsKey(EffectType.Poison) && effects[EffectType.Poison] > 0) {
+                int dmg = effects[EffectType.Poison];
+                hp -= dmg;
+                summary.Add($"☠️ {name} dostal {dmg} poškození jedem.");
+                effects[EffectType.Poison] -= 1;
+            }
+            if (effects.ContainsKey(EffectType.Flame) && effects[EffectType.Flame] > 0) {
+                int dmg = effects[EffectType.Flame];
+                hp -= dmg;
+                summary.Add($"🔥 {name} dostal {dmg} poškození hořením.");
+                effects[EffectType.Flame] -= 1;
+            }
+            if (effects.ContainsKey(EffectType.Regen) && effects[EffectType.Regen] > 0) {
+                int heal = effects[EffectType.Regen];
+                hp += heal;
+                summary.Add($"💖 {name} se vyléčil o {heal} HP.");
+                effects[EffectType.Regen] -= 1;
+            }
+            if (effects.ContainsKey(EffectType.Weak) && effects[EffectType.Weak] > 0) effects[EffectType.Weak] -= 1;
+            if (effects.ContainsKey(EffectType.Vulnerable) && effects[EffectType.Vulnerable] > 0) effects[EffectType.Vulnerable] -= 1;
         }
 
         public async Task PlayerReady(string roomName, string playerName)
@@ -463,27 +535,56 @@ namespace RoguelikeCardGame.Hubs
                     var enemies = _roomEnemies.ContainsKey(roomName) ? _roomEnemies[roomName] : new List<ActiveEnemy>();
                     bool allDead = enemies.Count > 0 && enemies.All(e => e.Hp <= 0);
 
+                    foreach (var p in room.Players)
+                    {
+                        int hp = p.Hp; int block = p.Block;
+                        ProcessEffectsAtEndOfTurn(p.Effects, ref hp, ref block, summary, p.Name);
+                        p.Hp = hp; if (p.Hp < 0) p.Hp = 0; if (p.Hp > p.MaxHp) p.Hp = p.MaxHp;
+                    }
+
                     if (!allDead && enemies.Count > 0)
                     {
                         summary.Add($"--- TAH NEPŘÁTEL ---");
                         foreach (var enemy in enemies.Where(e => e.Hp > 0))
                         {
-                            var action = enemy.CurrentAction;
-                            summary.Add($"{enemy.Name} provedl: {action.Name}!");
-                            if (action.Heal > 0) { enemy.Hp += action.Heal; if (enemy.Hp > enemy.MaxHp) enemy.Hp = enemy.MaxHp; }
-                            
-                            if (action.DamageToAll > 0)
+                            int eHp = enemy.Hp; int eBlock = 0;
+                            ProcessEffectsAtEndOfTurn(enemy.Effects, ref eHp, ref eBlock, summary, enemy.Name);
+                            enemy.Hp = eHp; if (enemy.Hp < 0) enemy.Hp = 0;
+
+                            if (enemy.Hp > 0)
                             {
-                                foreach (var p in room.Players)
+                                var action = enemy.CurrentAction;
+                                summary.Add($"{enemy.Name} provedl: {action.Name}!");
+                                if (action.Heal > 0) { enemy.Hp += action.Heal; if (enemy.Hp > enemy.MaxHp) enemy.Hp = enemy.MaxHp; }
+                                
+                                if (action.DamageToAll > 0)
                                 {
-                                    int dmgTaken = Math.Max(0, action.DamageToAll - p.Block);
-                                    p.Hp -= dmgTaken;
-                                    if (p.Hp < 0) p.Hp = 0; 
+                                    int enemyBaseDmg = action.DamageToAll;
+                                    if (enemy.Effects.ContainsKey(EffectType.Weak) && enemy.Effects[EffectType.Weak] > 0)
+                                        enemyBaseDmg = (int)(enemyBaseDmg * 0.75);
+
+                                    foreach (var p in room.Players)
+                                    {
+                                        int finalDmg = enemyBaseDmg;
+                                        if (p.Effects.ContainsKey(EffectType.Vulnerable) && p.Effects[EffectType.Vulnerable] > 0)
+                                            finalDmg = (int)(finalDmg * 1.5);
+
+                                        int dmgTaken = Math.Max(0, finalDmg - p.Block);
+                                        p.Hp -= dmgTaken;
+                                        if (p.Hp < 0) p.Hp = 0; 
+                                    }
                                 }
+                                enemy.CurrentAction = EnemyDatabase.GetRandomActionForEnemy(enemy.TemplateName);
                             }
-                            enemy.CurrentAction = EnemyDatabase.GetRandomActionForEnemy(enemy.TemplateName);
+                            else 
+                            {
+                                // Pokud zemřel na JED nebo OHEŇ na konci tahu, aplikuj Relikvie všem
+                                foreach (var p in room.Players) RelicManager.OnEnemyKilled(p, room);
+                            }
                         }
                     }
+
+                    allDead = enemies.Count > 0 && enemies.All(e => e.Hp <= 0);
 
                     room.PlayersReady.Clear();
                     await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
@@ -497,6 +598,11 @@ namespace RoguelikeCardGame.Hubs
                             currentNode.IsCompleted = true;
                             Random rng = new Random();
                             
+                            foreach (var p in room.Players)
+                            {
+                                RelicManager.ApplyCombatEndRelics(p, room);
+                            }
+
                             int goldReward = 0;
                             if (currentNode.Type == NodeType.Encounter) goldReward = rng.Next(15, 31);
                             else if (currentNode.Type == NodeType.EliteEncounter) goldReward = rng.Next(40, 71);
@@ -557,7 +663,10 @@ namespace RoguelikeCardGame.Hubs
                         {
                             p.Mana = p.MaxMana;
                             p.Block = 0; 
+                            p.CardsPlayedThisTurn = 0; // ZMĚNA: Reset počítadla karet pro relikvie
                             
+                            RelicManager.ApplyTurnStartRelics(p, room);
+
                             if (room.CurrentKarma >= 10) p.Block += 3;
                             else if (room.CurrentKarma <= -10) { p.Hp -= 1; if (p.Hp < 0) p.Hp = 0; }
                             
