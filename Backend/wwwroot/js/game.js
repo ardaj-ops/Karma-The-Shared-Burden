@@ -107,6 +107,9 @@ function getCredentials() {
 async function startConnectionIfNotStarted() {
     if (connection.state === signalR.HubConnectionState.Disconnected) {
         await connection.start();
+    } else if (connection.state === signalR.HubConnectionState.Connecting) {
+        // Pokud už se připojuje, "vyhodíme chybu" aby se nepokusil poslat data do prázdna
+        throw new Error("Připojování k serveru probíhá, vydržte chvíli...");
     }
 }
 
@@ -117,7 +120,7 @@ async function createLobby() {
         await connection.invoke("CreateLobby", currentRoomName, playerName, playerClass);
         showWaitingRoom();
     } catch (err) {
-        console.error(err);
+        console.warn(err.message); // Necháme to jen jako varování, hra nespadne
     }
 }
 
@@ -128,7 +131,7 @@ async function joinLobby() {
         await connection.invoke("JoinLobby", currentRoomName, playerName, playerClass);
         showWaitingRoom();
     } catch (err) {
-        console.error(err);
+        console.warn(err.message);
     }
 }
 
@@ -198,30 +201,29 @@ connection.on("EnteredNode", (nodeTypeRaw, nodeData, enemiesArray) => {
     let nodeType = getTypeString(nodeTypeRaw); logMessage(`📍 Vstupujete do: ${nodeType}`);
     myCurrentNodeId = safeGet(nodeData, 'id', 'Id'); currentMapVotes = {}; currentEnemiesArray = enemiesArray; 
     let mapNode = gameMap.find(n => safeGet(n, 'id', 'Id') === myCurrentNodeId); if(mapNode) mapNode.isCompleted = true;
-
-    if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") { renderEnemies(enemiesArray); toggleUI("battle"); } 
-    else if (nodeType === "Treasure") {
-        renderEnemies([]); toggleUI("battle");
-        const btn = document.createElement("button"); btn.innerText = "💰 Poklad sebrán. Pokračovat na mapu";
-        btn.style.cssText = "padding: 15px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;";
-        btn.onclick = () => { toggleUI("map"); renderMap(); }; document.getElementById("enemies-container").appendChild(btn);
-    }
+    if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") { 
+        renderEnemies(enemiesArray); 
+        toggleUI("battle"); 
+    } 
 });
-
 // --- EVENTS & SHOP & REST ---
 connection.on("EnterEvent", (eventData) => {
     toggleUI("event");
     document.getElementById("event-title").innerText = safeGet(eventData, 'title', 'Title');
     document.getElementById("event-desc").innerText = safeGet(eventData, 'desc', 'Desc');
     const optionsContainer = document.getElementById("event-options"); optionsContainer.innerHTML = "";
+    
     let opts = safeGet(eventData, 'options', 'Options') || [];
+    let eventId = safeGet(eventData, 'id', 'Id'); // ZMĚNA: Získáme ID tohoto eventu
+    
     opts.forEach(opt => {
         const btn = document.createElement("button");
         btn.innerText = safeGet(opt, 'text', 'Text');
         btn.style.cssText = "padding: 15px 30px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;";
         btn.onclick = () => {
             optionsContainer.innerHTML = "<p>Vybráno! Čekáme na ostatní nebo posun...</p>";
-            connection.invoke("ResolveEventOption", currentRoomName, playerName, safeGet(opt, 'id', 'Id')).catch(err => console.error(err));
+            // ZMĚNA: Posíláme i eventId zpět na server
+            connection.invoke("ResolveEventOption", currentRoomName, playerName, eventId, safeGet(opt, 'id', 'Id')).catch(err => console.error(err));
         };
         optionsContainer.appendChild(btn);
     });
