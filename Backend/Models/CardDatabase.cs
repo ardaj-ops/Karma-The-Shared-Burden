@@ -14,137 +14,119 @@ namespace RoguelikeCardGame.Models
             // ==========================================
             // 1. PALADIN (SVĚTLONOŠ) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Základní a levné útoky (1-10) ---
             { "P_01", new CardTemplate("P_01", "Svatý úder", "Udělí 5 zranění. Karma +1.", cost: 1, damage: 5, karmaShift: 1) },
-            { "P_02", new CardTemplate("P_02", "Zářící čepel", "Udělí 7 zranění.", cost: 1, damage: 7) },
+            { "P_02", new CardTemplate("P_02", "Zářící čepel", "Udělí 7 zranění. Aplikuje 1 Zranitelnost.", cost: 1, damage: 7, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
             { "P_03", new CardTemplate("P_03", "Rychlý švih", "Udělí 3 zranění dvakrát. Karma +1.", cost: 1, damage: 3, hitCount: 2, karmaShift: 1) },
             { "P_04", new CardTemplate("P_04", "Úder štítem", "Udělí 4 zranění a přidá 4 blok.", cost: 1, damage: 4, block: 4) },
             { "P_05", new CardTemplate("P_05", "Drtivý dopad", "Udělí 10 zranění. Karma -1.", cost: 2, damage: 10, karmaShift: -1) },
             { "P_06", new CardTemplate("P_06", "Výpad", "Udělí 5 zranění, lízni 1 kartu.", cost: 1, damage: 5, drawCards: 1) },
-            { "P_07", new CardTemplate("P_07", "Očišťující plamen", "Udělí 6 zranění. Karma +2.", cost: 1, damage: 6, karmaShift: 2) },
+            { "P_07", new CardTemplate("P_07", "Očišťující plamen", "Udělí 6 zranění. Aplikuje 2 Hoření. Karma +2.", cost: 1, damage: 6, karmaShift: 2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 2) }) },
             { "P_08", new CardTemplate("P_08", "Těžká rána", "Udělí 12 zranění. Karma -2.", cost: 2, damage: 12, karmaShift: -2) },
             { "P_09", new CardTemplate("P_09", "Odplata", "Udělí 8 zranění a přidá 2 blok.", cost: 1, damage: 8, block: 2) },
             { "P_10", new CardTemplate("P_10", "Soudný den", "Udělí 15 zranění. Karma +1.", cost: 3, damage: 15, karmaShift: 1) },
-
-            // --- Obrana a blokování (11-25) ---
             { "P_11", new CardTemplate("P_11", "Svatý štít", "Přidá 6 bloku. Karma +1.", cost: 1, block: 6, karmaShift: 1) },
             { "P_12", new CardTemplate("P_12", "Hradba víry", "Přidá 10 bloku. Karma +1.", cost: 2, block: 10, karmaShift: 1) },
-            { "P_13", new CardTemplate("P_13", "Zlatá aura", "Přidá 15 bloku. Karma +2.", cost: 3, block: 15, karmaShift: 2) },
+            { "P_13", new CardTemplate("P_13", "Zlatá aura", "Přidá 15 bloku. Získáš 1 Obratnost. Karma +2.", cost: 3, block: 15, karmaShift: 2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 1) }) },
             { "P_14", new CardTemplate("P_14", "Ochrana slabých", "Přidá 8 bloku, vyléčí 2 HP.", cost: 2, block: 8, heal: 2) },
             { "P_15", new CardTemplate("P_15", "Karmická bariéra", "Přidá 5 bloku za 0 energie. Karma +1.", cost: 0, block: 5, karmaShift: 1) },
             { "P_16", new CardTemplate("P_16", "Odražení", "Přidá 4 bloku a udělí 4 zranění.", cost: 1, block: 4, damage: 4) },
             { "P_17", new CardTemplate("P_17", "Zdi kláštera", "Přidá 12 bloku. Karma 0.", cost: 2, block: 12) },
             { "P_18", new CardTemplate("P_18", "Nezlomnost", "Přidá 7 bloku, lízni 1 kartu.", cost: 1, block: 7, drawCards: 1) },
-            { "P_19", new CardTemplate("P_19", "Štít úsvitu", "Přidá 9 bloku. Karma +2.", cost: 1, block: 9, karmaShift: 2) },
+            { "P_19", new CardTemplate("P_19", "Štít úsvitu", "Přidá 9 bloku. Získáš 1 Regeneraci. Karma +2.", cost: 1, block: 9, karmaShift: 2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 1) }) },
             { "P_20", new CardTemplate("P_20", "Bašta", "Přidá 20 bloku! Karma +3.", cost: 3, block: 20, karmaShift: 3) },
             { "P_21", new CardTemplate("P_21", "Požehnaný kov", "Přidá 6 bloku, vyléčí 3 HP.", cost: 1, block: 6, heal: 3) },
             { "P_22", new CardTemplate("P_22", "Krytí", "Přidá 5 bloku. Stojí 0.", cost: 0, block: 5) },
             { "P_23", new CardTemplate("P_23", "Pevný postoj", "Přidá 8 bloku, Karma +1.", cost: 1, block: 8, karmaShift: 1) },
             { "P_24", new CardTemplate("P_24", "Svatyně", "Přidá 14 bloku. Karma +1.", cost: 2, block: 14, karmaShift: 1) },
             { "P_25", new CardTemplate("P_25", "Andělská křídla", "Přidá 10 bloku, lízni 2 karty. Karma +2.", cost: 2, block: 10, drawCards: 2, karmaShift: 2) },
-
-            // --- Léčení a Manipulace s Karmou (26-40) ---
             { "P_26", new CardTemplate("P_26", "Modlitba", "Vyléčí 5 HP. Karma +1.", cost: 1, heal: 5, karmaShift: 1) },
-            { "P_27", new CardTemplate("P_27", "Hojivý dotek", "Vyléčí 8 HP. Karma +2.", cost: 2, heal: 8, karmaShift: 2) },
+            { "P_27", new CardTemplate("P_27", "Hojivý dotek", "Vyléčí 8 HP. Dává cíl 2 Regenerace. Karma +2.", cost: 2, heal: 8, karmaShift: 2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 2) }) },
             { "P_28", new CardTemplate("P_28", "Světlo naděje", "Vyléčí 4 HP, lízni 1 kartu.", cost: 1, heal: 4, drawCards: 1) },
             { "P_29", new CardTemplate("P_29", "Očista", "Vyléčí 10 HP. Karma +3.", cost: 2, heal: 10, karmaShift: 3) },
             { "P_30", new CardTemplate("P_30", "Zázrak", "Vyléčí 20 HP! Karma +5.", cost: 3, heal: 20, karmaShift: 5) },
             { "P_31", new CardTemplate("P_31", "Malé požehnání", "Vyléčí 3 HP za 0 energie.", cost: 0, heal: 3) },
             { "P_32", new CardTemplate("P_32", "Vlna světla", "Vyléčí 6 HP a udělí 6 zranění.", cost: 2, heal: 6, damage: 6) },
-            { "P_33", new CardTemplate("P_33", "Slza anděla", "Vyléčí 12 HP. Karma +2.", cost: 2, heal: 12, karmaShift: 2) },
+            { "P_33", new CardTemplate("P_33", "Slza anděla", "Vyléčí 12 HP. Dává 3 Regenerace. Karma +2.", cost: 2, heal: 12, karmaShift: 2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 3) }) },
             { "P_34", new CardTemplate("P_34", "Usmíření", "Vyléčí 5 HP. Karma +3.", cost: 1, heal: 5, karmaShift: 3) },
             { "P_35", new CardTemplate("P_35", "Zlatý prach", "Vyléčí 2 HP, přidá 2 blok. Stojí 0.", cost: 0, heal: 2, block: 2) },
             { "P_36", new CardTemplate("P_36", "Záře", "Vyléčí 7 HP, lízni 1 kartu. Karma +1.", cost: 2, heal: 7, drawCards: 1, karmaShift: 1) },
             { "P_37", new CardTemplate("P_37", "Božský klid", "Karma +4 za 0 energie.", cost: 0, karmaShift: 4) },
-            { "P_38", new CardTemplate("P_38", "Svatá oběť", "Udělí ti zranění (později), vyléčí 15 HP. Karma +2.", cost: 1, heal: 15, karmaShift: 2) }, 
+            { "P_38", new CardTemplate("P_38", "Svatá oběť", "Aplikuje na tebe 2 Zranitelnosti. Vyléčí 15 HP. Karma +2.", cost: 1, heal: 15, karmaShift: 2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) }, 
             { "P_39", new CardTemplate("P_39", "Znovuzrození", "Vyléčí 25 HP. Karma +4.", cost: 3, heal: 25, karmaShift: 4) },
             { "P_40", new CardTemplate("P_40", "Sjednocení", "Vyléčí 4 HP, přidá 4 blok, lízni 1 kartu.", cost: 2, heal: 4, block: 4, drawCards: 1) },
-
-            // --- Podpora, Komba a Ultimátní karty (41-50) ---
             { "P_41", new CardTemplate("P_41", "Záblesk poznání", "Lízni 2 karty. Karma +1.", cost: 0, drawCards: 2, karmaShift: 1) },
             { "P_42", new CardTemplate("P_42", "Vedení", "Lízni 3 karty. Karma +2.", cost: 1, drawCards: 3, karmaShift: 2) },
-            { "P_43", new CardTemplate("P_43", "Boží hněv", "Udělí 5 zranění třikrát! Karma +3.", cost: 3, damage: 5, hitCount: 3, karmaShift: 3) },
+            { "P_43", new CardTemplate("P_43", "Boží hněv", "Udělí 5 zranění třikrát! Aplikuje 2 Oslabení. Karma +3.", cost: 3, damage: 5, hitCount: 3, karmaShift: 3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 2) }) },
             { "P_44", new CardTemplate("P_44", "Svatá smršť", "Udělí 4 zranění dvakrát. Lízni 1 kartu.", cost: 2, damage: 4, hitCount: 2, drawCards: 1) },
-            { "P_45", new CardTemplate("P_45", "Spravedlnost", "Udělí 20 zranění. Karma +2.", cost: 3, damage: 20, karmaShift: 2) },
+            { "P_45", new CardTemplate("P_45", "Spravedlnost", "Udělí 20 zranění. Získáš 2 Síly. Karma +2.", cost: 3, damage: 20, karmaShift: 2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
             { "P_46", new CardTemplate("P_46", "Aura vykoupení", "Přidá 15 bloku, vyléčí 10 HP. Karma +4.", cost: 3, block: 15, heal: 10, karmaShift: 4) },
             { "P_47", new CardTemplate("P_47", "Kázání", "Lízni 2 karty. Přidá 5 bloku.", cost: 1, drawCards: 2, block: 5) },
             { "P_48", new CardTemplate("P_48", "Proroctví", "Lízni 4 karty! Karma 0.", cost: 2, drawCards: 4) },
             { "P_49", new CardTemplate("P_49", "Zásah shůry", "Udělí 30 zranění! Karma +5.", cost: 4, damage: 30, karmaShift: 5) }, 
-            { "P_50", new CardTemplate("P_50", "Absolutní světlo", "Vyléčí 15 HP, přidá 15 bloku, udělí 15 zranění. Karma +5.", cost: 5, heal: 15, block: 15, damage: 15, karmaShift: 5) },
+            { "P_50", new CardTemplate("P_50", "Absolutní světlo", "Vyléčí 15 HP, přidá 15 bloku, udělí 15 zranění. Získáš 2 Obratnosti. Karma +5.", cost: 5, heal: 15, block: 15, damage: 15, karmaShift: 5, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 2) }) },
 
             // ==========================================
             // 2. WARLOCK (STÍNOVÝ MÁG) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Temné útoky a kletby (1-20) ---
             { "W_01", new CardTemplate("W_01", "Stínový šíp", "Udělí 6 zranění. Karma -1.", cost: 1, damage: 6, karmaShift: -1) },
-            { "W_02", new CardTemplate("W_02", "Dotek smrti", "Udělí 9 zranění. Karma -2.", cost: 1, damage: 9, karmaShift: -2) },
-            { "W_03", new CardTemplate("W_03", "Krvavý dráp", "Udělí 12 zranění! Karma -3.", cost: 1, damage: 12, karmaShift: -3) },
+            { "W_02", new CardTemplate("W_02", "Dotek smrti", "Udělí 6 zranění. Aplikuje 3 Jed. Karma -2.", cost: 1, damage: 6, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 3) }) },
+            { "W_03", new CardTemplate("W_03", "Krvavý dráp", "Udělí 12 zranění! Aplikuje 1 Zranitelnost. Karma -3.", cost: 1, damage: 12, karmaShift: -3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
             { "W_04", new CardTemplate("W_04", "Dvojitý sek", "Udělí 4 zranění dvakrát. Karma -1.", cost: 1, damage: 4, hitCount: 2, karmaShift: -1) },
             { "W_05", new CardTemplate("W_05", "Vysátí duše", "Udělí 5 zranění, vyléčí 2 HP. Karma -1.", cost: 1, damage: 5, heal: 2, karmaShift: -1) },
-            { "W_06", new CardTemplate("W_06", "Plameny pekel", "Udělí 15 zranění. Karma -2.", cost: 2, damage: 15, karmaShift: -2) },
-            { "W_07", new CardTemplate("W_07", "Hniloba", "Udělí 8 zranění, lízni 1 kartu. Karma -2.", cost: 1, damage: 8, drawCards: 1, karmaShift: -2) },
+            { "W_06", new CardTemplate("W_06", "Plameny pekel", "Udělí 10 zranění. Aplikuje 4 Hoření. Karma -2.", cost: 2, damage: 10, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 4) }) },
+            { "W_07", new CardTemplate("W_07", "Hniloba", "Aplikuje 5 Jed, lízni 1 kartu. Karma -2.", cost: 1, drawCards: 1, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 5) }) },
             { "W_08", new CardTemplate("W_08", "Bičování", "Udělí 6 zranění. Stojí 0 energie! Karma -2.", cost: 0, damage: 6, karmaShift: -2) },
             { "W_09", new CardTemplate("W_09", "Zkázonosný blesk", "Udělí 20 zranění! Karma -4.", cost: 2, damage: 20, karmaShift: -4) },
-            { "W_10", new CardTemplate("W_10", "Temná exploze", "Udělí 10 zranění všem (zatím jednomu). Karma -3.", cost: 2, damage: 10, karmaShift: -3) },
-            { "W_11", new CardTemplate("W_11", "Smrtící polibek", "Udělí 7 zranění, vyléčí 4 HP. Karma -2.", cost: 2, damage: 7, heal: 4, karmaShift: -2) },
+            { "W_10", new CardTemplate("W_10", "Temná exploze", "Udělí 10 zranění. Aplikuje 2 Zranitelnost. Karma -3.", cost: 2, damage: 10, karmaShift: -3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) },
+            { "W_11", new CardTemplate("W_11", "Smrtící polibek", "Aplikuje 6 Jed, vyléčí 4 HP. Karma -2.", cost: 2, heal: 4, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 6) }) },
             { "W_12", new CardTemplate("W_12", "Erupce stínů", "Udělí 5 zranění třikrát! Karma -3.", cost: 2, damage: 5, hitCount: 3, karmaShift: -3) },
-            { "W_13", new CardTemplate("W_13", "Krutost", "Udělí 14 zranění. Karma -1.", cost: 2, damage: 14, karmaShift: -1) },
+            { "W_13", new CardTemplate("W_13", "Krutost", "Udělí 14 zranění. Aplikuje 2 Oslabení. Karma -1.", cost: 2, damage: 14, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 2) }) },
             { "W_14", new CardTemplate("W_14", "Zákeřný úder", "Udělí 8 zranění za 0 energie. Karma -3.", cost: 0, damage: 8, karmaShift: -3) },
             { "W_15", new CardTemplate("W_15", "Vysátí krve", "Udělí 10 zranění, vyléčí 10 HP. Karma -3.", cost: 3, damage: 10, heal: 10, karmaShift: -3) },
-            { "W_16", new CardTemplate("W_16", "Nekróza", "Udělí 18 zranění. Karma -4.", cost: 2, damage: 18, karmaShift: -4) },
+            { "W_16", new CardTemplate("W_16", "Nekróza", "Aplikuje 10 Jed. Karma -4.", cost: 2, karmaShift: -4, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 10) }) },
             { "W_17", new CardTemplate("W_17", "Ztracená duše", "Udělí 4 zranění a přidá 4 blok. Karma -1.", cost: 1, damage: 4, block: 4, karmaShift: -1) },
-            { "W_18", new CardTemplate("W_18", "Šílenství", "Udělí 3 zranění čtyřikrát! Karma -4.", cost: 2, damage: 3, hitCount: 4, karmaShift: -4) },
-            { "W_19", new CardTemplate("W_19", "Bolest", "Udělí 11 zranění. Karma -1.", cost: 1, damage: 11, karmaShift: -1) },
+            { "W_18", new CardTemplate("W_18", "Šílenství", "Udělí 3 zranění čtyřikrát! Získáš 1 Sílu. Karma -4.", cost: 2, damage: 3, hitCount: 4, karmaShift: -4, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 1) }) },
+            { "W_19", new CardTemplate("W_19", "Bolest", "Aplikuje 4 Jed a 2 Zranitelnost. Karma -1.", cost: 1, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 4), new EffectApplication(EffectType.Vulnerable, 2) }) },
             { "W_20", new CardTemplate("W_20", "Pohlcení světla", "Udělí 15 zranění, Karma klesne o -5!", cost: 1, damage: 15, karmaShift: -5) },
-
-            // --- Rituály, Lízání karet a Manipulace (21-35) ---
             { "W_21", new CardTemplate("W_21", "Temný pakt", "Lízni 3 karty. Karma -3.", cost: 1, drawCards: 3, karmaShift: -3) },
             { "W_22", new CardTemplate("W_22", "Krvavá oběť", "Lízni 2 karty za 0 energie. Karma -2.", cost: 0, drawCards: 2, karmaShift: -2) },
             { "W_23", new CardTemplate("W_23", "Pohled do propasti", "Lízni 4 karty! Karma -4.", cost: 2, drawCards: 4, karmaShift: -4) },
-            { "W_24", new CardTemplate("W_24", "Rituál", "Přidá 1 energii (zatím lízne 1 kartu). Karma -1.", cost: 0, drawCards: 1, karmaShift: -1) },
-            { "W_25", new CardTemplate("W_25", "Noční můra", "Lízni 2 karty, udělí 5 zranění. Karma -2.", cost: 1, drawCards: 2, damage: 5, karmaShift: -2) },
-            { "W_26", new CardTemplate("W_26", "Studna temnoty", "Karma -4 za 0 energie.", cost: 0, karmaShift: -4) },
+            { "W_24", new CardTemplate("W_24", "Rituál", "Získáš 2 Síly. Karma -1.", cost: 1, karmaShift: -1, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
+            { "W_25", new CardTemplate("W_25", "Noční můra", "Aplikuje 3 Jed, lízni 2 karty. Karma -2.", cost: 1, drawCards: 2, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 3) }) },
+            { "W_26", new CardTemplate("W_26", "Studna temnoty", "Získáš 2 Obratnosti. Karma -4 za 0 energie.", cost: 0, karmaShift: -4, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 2) }) },
             { "W_27", new CardTemplate("W_27", "Hlad", "Lízni 1 kartu, vyléčí 3 HP. Karma -1.", cost: 1, drawCards: 1, heal: 3, karmaShift: -1) },
-            { "W_28", new CardTemplate("W_28", "Znesvěcení", "Lízni 3 karty. Karma -2.", cost: 2, drawCards: 3, karmaShift: -2) },
+            { "W_28", new CardTemplate("W_28", "Znesvěcení", "Lízni 3 karty. Aplikuje 2 Zranitelnost. Karma -2.", cost: 2, drawCards: 3, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) },
             { "W_29", new CardTemplate("W_29", "Černá magie", "Lízni 2 karty, přidá 5 blok. Karma -2.", cost: 1, drawCards: 2, block: 5, karmaShift: -2) },
             { "W_30", new CardTemplate("W_30", "Kniha mrtvých", "Lízni 5 karet!!! Karma -5.", cost: 3, drawCards: 5, karmaShift: -5) },
             { "W_31", new CardTemplate("W_31", "Smlouva s démonem", "Vyléčí 15 HP, ale Karma -5.", cost: 1, heal: 15, karmaShift: -5) },
             { "W_32", new CardTemplate("W_32", "Zakázané vědění", "Lízni 2 karty. Stojí 0.", cost: 0, drawCards: 2) },
             { "W_33", new CardTemplate("W_33", "Ozvěny smrti", "Udělí 6 zranění, lízni 2 karty. Karma -3.", cost: 1, damage: 6, drawCards: 2, karmaShift: -3) },
-            { "W_34", new CardTemplate("W_34", "Stínová forma", "Lízni 1 kartu, Karma -2.", cost: 0, drawCards: 1, karmaShift: -2) },
-            { "W_35", new CardTemplate("W_35", "Zkáza", "Lízni 3 karty, udělí 10 zranění. Karma -4.", cost: 2, drawCards: 3, damage: 10, karmaShift: -4) },
-
-            // --- Křehká obrana (Warlock se moc nebrání) (36-45) ---
+            { "W_34", new CardTemplate("W_34", "Stínová forma", "Získáš 2 Síly. Karma -2.", cost: 1, karmaShift: -2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
+            { "W_35", new CardTemplate("W_35", "Zkáza", "Aplikuje 6 Jed, lízni 3 karty. Karma -4.", cost: 2, drawCards: 3, karmaShift: -4, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 6) }) },
             { "W_36", new CardTemplate("W_36", "Štít z kostí", "Přidá 5 bloku. Karma -1.", cost: 1, block: 5, karmaShift: -1) },
             { "W_37", new CardTemplate("W_37", "Brnění stínů", "Přidá 9 bloku. Karma -2.", cost: 1, block: 9, karmaShift: -2) },
-            { "W_38", new CardTemplate("W_38", "Přízračná stěna", "Přidá 12 bloku. Karma -3.", cost: 2, block: 12, karmaShift: -3) },
+            { "W_38", new CardTemplate("W_38", "Přízračná stěna", "Přidá 12 bloku. Získáš 1 Obratnost. Karma -3.", cost: 2, block: 12, karmaShift: -3, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 1) }) },
             { "W_39", new CardTemplate("W_39", "Krvavá bariéra", "Přidá 8 bloku, vyléčí 2 HP. Karma -2.", cost: 1, block: 8, heal: 2, karmaShift: -2) },
             { "W_40", new CardTemplate("W_40", "Odhmotnění", "Přidá 15 bloku! Karma -4.", cost: 2, block: 15, karmaShift: -4) },
             { "W_41", new CardTemplate("W_41", "Zastření", "Přidá 4 bloku za 0 energie.", cost: 0, block: 4) },
             { "W_42", new CardTemplate("W_42", "Šepot prázdnoty", "Přidá 7 bloku, lízni 1 kartu. Karma -2.", cost: 1, block: 7, drawCards: 1, karmaShift: -2) },
-            { "W_43", new CardTemplate("W_43", "Odmítnutí světla", "Přidá 10 bloku. Karma -3.", cost: 1, block: 10, karmaShift: -3) },
+            { "W_43", new CardTemplate("W_43", "Odmítnutí světla", "Přidá 10 bloku. Aplikuje 2 Oslabení. Karma -3.", cost: 1, block: 10, karmaShift: -3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 2) }) },
             { "W_44", new CardTemplate("W_44", "Temný kokon", "Přidá 20 bloku. Karma -5.", cost: 3, block: 20, karmaShift: -5) },
             { "W_45", new CardTemplate("W_45", "Upíří aura", "Přidá 5 bloku, vyléčí 5 HP. Karma -2.", cost: 2, block: 5, heal: 5, karmaShift: -2) },
-
-            // --- Ultimátní zkáza (46-50) ---
-            { "W_46", new CardTemplate("W_46", "Apokalypsa", "Udělí 25 zranění. Karma -4.", cost: 3, damage: 25, karmaShift: -4) },
-            { "W_47", new CardTemplate("W_47", "Déšť meteorů", "Udělí 8 zranění třikrát! Karma -5.", cost: 3, damage: 8, hitCount: 3, karmaShift: -5) },
+            { "W_46", new CardTemplate("W_46", "Apokalypsa", "Aplikuje 15 Jed. Karma -4.", cost: 3, karmaShift: -4, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 15) }) },
+            { "W_47", new CardTemplate("W_47", "Déšť meteorů", "Udělí 8 zranění třikrát! Aplikuje 3 Hoření. Karma -5.", cost: 3, damage: 8, hitCount: 3, karmaShift: -5, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 3) }) },
             { "W_48", new CardTemplate("W_48", "Pohlcovač duší", "Udělí 15 zranění, vyléčí 15 HP. Karma -4.", cost: 4, damage: 15, heal: 15, karmaShift: -4) },
-            { "W_49", new CardTemplate("W_49", "Černá díra", "Lízni 5 karet, udělí 10 zranění. Karma -5.", cost: 3, drawCards: 5, damage: 10, karmaShift: -5) },
-            { "W_50", new CardTemplate("W_50", "Absolutní zkáza", "Udělí 40 zranění!!! Karma -7.", cost: 5, damage: 40, karmaShift: -7) },
+            { "W_49", new CardTemplate("W_49", "Černá díra", "Lízni 5 karet, aplikuje 5 Zranitelnost. Karma -5.", cost: 3, drawCards: 5, karmaShift: -5, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 5) }) },
+            { "W_50", new CardTemplate("W_50", "Absolutní zkáza", "Udělí 40 zranění!!! Získáš 3 Síly. Karma -7.", cost: 5, damage: 40, karmaShift: -7, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 3) }) },
 
             // ==========================================
             // 3. MONK (VYROVNÁVAČ) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Bojová umění a rychlé údery (1-20) ---
             { "M_01", new CardTemplate("M_01", "Úder zenu", "Udělí 6 zranění. Karma 0.", cost: 1, damage: 6, karmaShift: 0) },
             { "M_02", new CardTemplate("M_02", "Dvojitý úder", "Udělí 4 zranění dvakrát. Karma 0.", cost: 1, damage: 4, hitCount: 2, karmaShift: 0) },
-            { "M_03", new CardTemplate("M_03", "Kop z otočky", "Udělí 9 zranění. Karma 0.", cost: 1, damage: 9, karmaShift: 0) },
-            { "M_04", new CardTemplate("M_04", "Tlakový bod", "Udělí 3 zranění, lízni 1 kartu. Karma 0.", cost: 0, damage: 3, drawCards: 1, karmaShift: 0) },
-            { "M_05", new CardTemplate("M_05", "Pěst tygra", "Udělí 14 zranění. Karma 0.", cost: 2, damage: 14, karmaShift: 0) },
+            { "M_03", new CardTemplate("M_03", "Kop z otočky", "Udělí 9 zranění. Aplikuje 1 Zranitelnost. Karma 0.", cost: 1, damage: 9, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
+            { "M_04", new CardTemplate("M_04", "Tlakový bod", "Aplikuje 3 Oslabení, lízni 1 kartu. Karma 0.", cost: 0, drawCards: 1, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 3) }) },
+            { "M_05", new CardTemplate("M_05", "Pěst tygra", "Udělí 14 zranění. Získáš 1 Sílu. Karma 0.", cost: 2, damage: 14, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 1) }) },
             { "M_06", new CardTemplate("M_06", "Smršť ran", "Udělí 2 zranění pětkrát! Karma 0.", cost: 2, damage: 2, hitCount: 5, karmaShift: 0) },
             { "M_07", new CardTemplate("M_07", "Úder otevřenou dlaní", "Udělí 5 zranění, přidá 5 blok. Karma 0.", cost: 1, damage: 5, block: 5, karmaShift: 0) },
             { "M_08", new CardTemplate("M_08", "Bodnutí pěstí", "Udělí 8 zranění. Karma +1.", cost: 1, damage: 8, karmaShift: 1) },
@@ -152,122 +134,109 @@ namespace RoguelikeCardGame.Models
             { "M_10", new CardTemplate("M_10", "Zářivý kop", "Udělí 12 zranění. Karma +1.", cost: 2, damage: 12, karmaShift: 1) },
             { "M_11", new CardTemplate("M_11", "Stínový kop", "Udělí 12 zranění. Karma -1.", cost: 2, damage: 12, karmaShift: -1) },
             { "M_12", new CardTemplate("M_12", "Série zenu", "Udělí 4 zranění třikrát. Karma 0.", cost: 2, damage: 4, hitCount: 3, karmaShift: 0) },
-            { "M_13", new CardTemplate("M_13", "Průraz", "Udělí 15 zranění. Karma 0.", cost: 2, damage: 15, karmaShift: 0) },
-            { "M_14", new CardTemplate("M_14", "Otevření gardu", "Udělí 7 zranění za 0 energie. Karma 0.", cost: 0, damage: 7, karmaShift: 0) },
+            { "M_13", new CardTemplate("M_13", "Průraz", "Udělí 15 zranění. Aplikuje 2 Zranitelnost. Karma 0.", cost: 2, damage: 15, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) },
+            { "M_14", new CardTemplate("M_14", "Otevření gardu", "Aplikuje 2 Zranitelnost za 0 energie. Karma 0.", cost: 0, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) },
             { "M_15", new CardTemplate("M_15", "Letící drak", "Udělí 18 zranění. Karma 0.", cost: 3, damage: 18, karmaShift: 0) },
             { "M_16", new CardTemplate("M_16", "Narušení čchi", "Udělí 5 zranění, lízni 2 karty. Karma 0.", cost: 1, damage: 5, drawCards: 2, karmaShift: 0) },
             { "M_17", new CardTemplate("M_17", "Bleskový výpad", "Udělí 6 zranění, stoji 0. Karma 0.", cost: 0, damage: 6, karmaShift: 0) },
             { "M_18", new CardTemplate("M_18", "Těžká dlaň", "Udělí 20 zranění. Karma 0.", cost: 3, damage: 20, karmaShift: 0) },
             { "M_19", new CardTemplate("M_19", "Úder jeřába", "Udělí 10 zranění. Karma +1.", cost: 1, damage: 10, karmaShift: 1) },
             { "M_20", new CardTemplate("M_20", "Úder hada", "Udělí 10 zranění. Karma -1.", cost: 1, damage: 10, karmaShift: -1) },
-
-            // --- Klid, Blokování a Meditace (21-35) ---
-            { "M_21", new CardTemplate("M_21", "Klidná mysl", "Přidá 7 bloku. Karma 0.", cost: 1, block: 7, karmaShift: 0) },
+            { "M_21", new CardTemplate("M_21", "Klidná mysl", "Přidá 7 bloku. Získáš 1 Obratnost. Karma 0.", cost: 1, block: 7, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 1) }) },
             { "M_22", new CardTemplate("M_22", "Ohyb rákosu", "Přidá 4 bloku, stojí 0. Karma 0.", cost: 0, block: 4, karmaShift: 0) },
             { "M_23", new CardTemplate("M_23", "Železná košile", "Přidá 12 bloku. Karma 0.", cost: 2, block: 12, karmaShift: 0) },
             { "M_24", new CardTemplate("M_24", "Bariéra čchi", "Přidá 15 bloku. Karma 0.", cost: 2, block: 15, karmaShift: 0) },
             { "M_25", new CardTemplate("M_25", "Vnitřní mír", "Přidá 5 bloku, vyléčí 3 HP. Karma 0.", cost: 1, block: 5, heal: 3, karmaShift: 0) },
             { "M_26", new CardTemplate("M_26", "Meditace", "Lízni 2 karty. Karma 0.", cost: 1, drawCards: 2, karmaShift: 0) },
             { "M_27", new CardTemplate("M_27", "Hluboká meditace", "Lízni 3 karty. Karma 0.", cost: 2, drawCards: 3, karmaShift: 0) },
-            { "M_28", new CardTemplate("M_28", "Soustředění", "Lízni 1 kartu, přidá 3 blok. Stojí 0.", cost: 0, drawCards: 1, block: 3, karmaShift: 0) },
+            { "M_28", new CardTemplate("M_28", "Soustředění", "Lízni 1 kartu, získáš 1 Sílu. Stojí 0.", cost: 0, drawCards: 1, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 1) }) },
             { "M_29", new CardTemplate("M_29", "Zklidnění tepu", "Vyléčí 5 HP. Karma 0.", cost: 1, heal: 5, karmaShift: 0) },
             { "M_30", new CardTemplate("M_30", "Harmonie", "Vyléčí 10 HP. Karma 0.", cost: 2, heal: 10, karmaShift: 0) },
             { "M_31", new CardTemplate("M_31", "Odražení síly", "Přidá 8 bloku, udělí 4 zranění. Karma 0.", cost: 1, block: 8, damage: 4, karmaShift: 0) },
             { "M_32", new CardTemplate("M_32", "Tok vody", "Přidá 6 bloku, lízni 1 kartu. Karma 0.", cost: 1, block: 6, drawCards: 1, karmaShift: 0) },
-            { "M_33", new CardTemplate("M_33", "Postoj hory", "Přidá 20 bloku! Karma 0.", cost: 3, block: 20, karmaShift: 0) },
+            { "M_33", new CardTemplate("M_33", "Postoj hory", "Přidá 20 bloku! Získáš 2 Obratnosti. Karma 0.", cost: 3, block: 20, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 2) }) },
             { "M_34", new CardTemplate("M_34", "Květ lotosu", "Vyléčí 4 HP, přidá 4 blok. Karma 0.", cost: 1, heal: 4, block: 4, karmaShift: 0) },
             { "M_35", new CardTemplate("M_35", "Prázdnota", "Lízni 4 karty. Karma 0.", cost: 2, drawCards: 4, karmaShift: 0) },
-
-            // --- Manipulace s Karmou (Jemné korekce) (36-40) ---
             { "M_36", new CardTemplate("M_36", "Krok do Světla", "Přidá 5 bloku. Karma +2.", cost: 0, block: 5, karmaShift: 2) },
             { "M_37", new CardTemplate("M_37", "Krok do Stínu", "Udělí 5 zranění. Karma -2.", cost: 0, damage: 5, karmaShift: -2) },
             { "M_38", new CardTemplate("M_38", "Přesun vah (Světlo)", "Lízni 2 karty. Karma +3.", cost: 1, drawCards: 2, karmaShift: 3) },
             { "M_39", new CardTemplate("M_39", "Přesun vah (Temnota)", "Lízni 2 karty. Karma -3.", cost: 1, drawCards: 2, karmaShift: -3) },
-            { "M_40", new CardTemplate("M_40", "Očištění mysli", "Vyléčí 2 HP, stojí 0. Karma +1.", cost: 0, heal: 2, karmaShift: 1) },
-
-            // --- Ultimátní techniky a Mistrovství (41-50) ---
+            { "M_40", new CardTemplate("M_40", "Očištění mysli", "Vyléčí 2 HP, získáš 1 Regeneraci. Karma +1.", cost: 0, heal: 2, karmaShift: 1, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 1) }) },
             { "M_41", new CardTemplate("M_41", "Zlatý drak", "Udělí 25 zranění! Karma 0.", cost: 3, damage: 25, karmaShift: 0) },
             { "M_42", new CardTemplate("M_42", "Tisíc dlaní", "Udělí 3 zranění šestkrát! Karma 0.", cost: 3, damage: 3, hitCount: 6, karmaShift: 0) },
-            { "M_43", new CardTemplate("M_43", "Nesmrtelnost", "Přidá 30 bloku!!! Karma 0.", cost: 4, block: 30, karmaShift: 0) },
+            { "M_43", new CardTemplate("M_43", "Nesmrtelnost", "Přidá 30 bloku. Získáš 3 Obratnosti. Karma 0.", cost: 4, block: 30, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 3) }) },
             { "M_44", new CardTemplate("M_44", "Absolutní rovnováha", "Vyléčí 8 HP, přidá 8 blok, udělí 8 zranění. Karma 0.", cost: 3, heal: 8, block: 8, damage: 8, karmaShift: 0) },
             { "M_45", new CardTemplate("M_45", "Mistrovské kombo", "Udělí 10 zranění, přidá 10 blok, lízni 2 karty. Karma 0.", cost: 3, damage: 10, block: 10, drawCards: 2, karmaShift: 0) },
-            { "M_46", new CardTemplate("M_46", "Probuzení", "Lízni 5 karet. Karma 0.", cost: 2, drawCards: 5, karmaShift: 0) },
-            { "M_47", new CardTemplate("M_47", "Úder prázdnoty", "Udělí 15 zranění za 1 energii (silné, ale vyžaduje přesně 0 Karmu v logice). Karma 0.", cost: 1, damage: 15, karmaShift: 0) },
+            { "M_46", new CardTemplate("M_46", "Probuzení", "Lízni 5 karet. Získáš 2 Síly. Karma 0.", cost: 2, drawCards: 5, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
+            { "M_47", new CardTemplate("M_47", "Úder prázdnoty", "Udělí 15 zranění za 1 energii. Karma 0.", cost: 1, damage: 15, karmaShift: 0) },
             { "M_48", new CardTemplate("M_48", "Všudypřítomnost", "Přidá 15 bloku, lízni 3 karty. Karma 0.", cost: 3, block: 15, drawCards: 3, karmaShift: 0) },
-            { "M_49", new CardTemplate("M_49", "Dokonalý úder", "Udělí 35 zranění! Karma 0.", cost: 4, damage: 35, karmaShift: 0) },
+            { "M_49", new CardTemplate("M_49", "Dokonalý úder", "Udělí 35 zranění! Aplikuje 3 Zranitelnost. Karma 0.", cost: 4, damage: 35, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 3) }) },
             { "M_50", new CardTemplate("M_50", "Osvícení", "Vyléčí 20 HP, přidá 20 bloku. Karma 0.", cost: 5, heal: 20, block: 20, karmaShift: 0) },
 
-           // ==========================================
+            // ==========================================
             // 4. BERSERKER (KRVAVÝ BERSERK) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Brutální a riskantní útoky (1-25) ---
             { "B_01", new CardTemplate("B_01", "Krvavý sek", "Udělí 8 zranění. Karma -1.", cost: 1, damage: 8, karmaShift: -1) },
             { "B_02", new CardTemplate("B_02", "Dvojitý zásek", "Udělí 5 zranění dvakrát. Karma -1.", cost: 1, damage: 5, hitCount: 2, karmaShift: -1) },
-            { "B_03", new CardTemplate("B_03", "Bezhlavý výpad", "Udělí 14 zranění. Karma -2.", cost: 1, damage: 14, karmaShift: -2) },
+            { "B_03", new CardTemplate("B_03", "Bezhlavý výpad", "Udělí 14 zranění. Získáš 1 Zranitelnost. Karma -2.", cost: 1, damage: 14, karmaShift: -2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
             { "B_04", new CardTemplate("B_04", "Rozdrcení", "Udělí 18 zranění! Karma -3.", cost: 2, damage: 18, karmaShift: -3) },
-            { "B_05", new CardTemplate("B_05", "Zvířecí zuřivost", "Udělí 4 zranění třikrát. Karma -2.", cost: 2, damage: 4, hitCount: 3, karmaShift: -2) },
-            { "B_06", new CardTemplate("B_06", "Obětování", "Udělí 20 zranění za 1 energii! (Stojí tě HP). Karma -3.", cost: 1, damage: 20, karmaShift: -3) },
-            { "B_07", new CardTemplate("B_07", "Rána naslepo", "Udělí 12 zranění náhodnému cíli. Karma -1.", cost: 1, damage: 12, karmaShift: -1) },
+            { "B_05", new CardTemplate("B_05", "Zvířecí zuřivost", "Udělí 4 zranění třikrát. Získáš 1 Sílu. Karma -2.", cost: 2, damage: 4, hitCount: 3, karmaShift: -2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 1) }) },
+            { "B_06", new CardTemplate("B_06", "Obětování", "Získáš 3 Síly. (Nasimulujeme ztrátu HP). Karma -3.", cost: 1, karmaShift: -3, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 3) }) },
+            { "B_07", new CardTemplate("B_07", "Rána naslepo", "Udělí 12 zranění. Karma -1.", cost: 1, damage: 12, karmaShift: -1) },
             { "B_08", new CardTemplate("B_08", "Vzteklý skus", "Udělí 6 zranění, vyléčí 2 HP. Karma -2.", cost: 1, damage: 6, heal: 2, karmaShift: -2) },
-            { "B_09", new CardTemplate("B_09", "Proražení zbroje", "Udělí 10 zranění, přidá 2 blok. Karma -1.", cost: 1, damage: 10, block: 2, karmaShift: -1) },
+            { "B_09", new CardTemplate("B_09", "Proražení zbroje", "Udělí 10 zranění, aplikuje 1 Zranitelnost. Karma -1.", cost: 1, damage: 10, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
             { "B_10", new CardTemplate("B_10", "Drtivý dopad", "Udělí 25 zranění! Karma -4.", cost: 3, damage: 25, karmaShift: -4) },
-            { "B_11", new CardTemplate("B_11", "Tržná rána", "Udělí 8 zranění, lízni 1 kartu. Karma -1.", cost: 1, damage: 8, drawCards: 1, karmaShift: -1) },
-            { "B_12", new CardTemplate("B_12", "Úder hlavou", "Udělí 15 zranění. Stojí tě 2 HP. Karma -2.", cost: 1, damage: 15, karmaShift: -2) },
-            { "B_13", new CardTemplate("B_13", "Masakr", "Udělí 8 zranění všem nepřátelům. Karma -3.", cost: 2, damage: 8, karmaShift: -3) },
+            { "B_11", new CardTemplate("B_11", "Tržná rána", "Aplikuje 4 Jed (Krvácení), lízni 1 kartu. Karma -1.", cost: 1, drawCards: 1, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 4) }) },
+            { "B_12", new CardTemplate("B_12", "Úder hlavou", "Udělí 15 zranění. Aplikuje 1 Zranitelnost na Tebe. Karma -2.", cost: 1, damage: 15, karmaShift: -2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
+            { "B_13", new CardTemplate("B_13", "Masakr", "Udělí 8 zranění všem. Karma -3.", cost: 2, damage: 8, karmaShift: -3) },
             { "B_14", new CardTemplate("B_14", "Poprava", "Udělí 30 zranění! Karma -4.", cost: 3, damage: 30, karmaShift: -4) },
             { "B_15", new CardTemplate("B_15", "Krvavá stopa", "Udělí 6 zranění. Karma 0.", cost: 0, damage: 6, karmaShift: 0) },
-            { "B_16", new CardTemplate("B_16", "Nekonečný hněv", "Udělí 3 zranění pětkrát! Karma -4.", cost: 2, damage: 3, hitCount: 5, karmaShift: -4) },
-            { "B_17", new CardTemplate("B_17", "Zlost", "Udělí 10 zranění. Stojí 0 energie! Karma -2.", cost: 0, damage: 10, karmaShift: -2) },
+            { "B_16", new CardTemplate("B_16", "Nekonečný hněv", "Udělí 3 zranění pětkrát! Získáš 2 Síly. Karma -4.", cost: 2, damage: 3, hitCount: 5, karmaShift: -4, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
+            { "B_17", new CardTemplate("B_17", "Zlost", "Získáš 2 Síly za 0 energie! Karma -2.", cost: 0, karmaShift: -2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
             { "B_18", new CardTemplate("B_18", "Odplata krve", "Udělí 12 zranění. Karma -1.", cost: 1, damage: 12, karmaShift: -1) },
             { "B_19", new CardTemplate("B_19", "Rozseknutí", "Udělí 22 zranění. Karma -3.", cost: 2, damage: 22, karmaShift: -3) },
-            { "B_20", new CardTemplate("B_20", "Barbarství", "Udělí 16 zranění. Karma -2.", cost: 2, damage: 16, karmaShift: -2) },
+            { "B_20", new CardTemplate("B_20", "Barbarství", "Udělí 16 zranění. Aplikuje 2 Oslabení. Karma -2.", cost: 2, damage: 16, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 2) }) },
             { "B_21", new CardTemplate("B_21", "Divoký švih", "Udělí 9 zranění. Karma -1.", cost: 1, damage: 9, karmaShift: -1) },
             { "B_22", new CardTemplate("B_22", "Kladivo zkázy", "Udělí 28 zranění. Karma -4.", cost: 3, damage: 28, karmaShift: -4) },
             { "B_23", new CardTemplate("B_23", "Bolestivý sek", "Udělí 15 zranění. Karma -2.", cost: 1, damage: 15, karmaShift: -2) },
             { "B_24", new CardTemplate("B_24", "Rozpárání", "Udělí 7 zranění dvakrát. Karma -3.", cost: 2, damage: 7, hitCount: 2, karmaShift: -3) },
             { "B_25", new CardTemplate("B_25", "Vír smrti", "Udělí 5 zranění čtyřikrát. Karma -4.", cost: 3, damage: 5, hitCount: 4, karmaShift: -4) },
-
-            // --- Adrenalin, Lízání a chabá obrana (26-40) ---
-            { "B_26", new CardTemplate("B_26", "Adrenalin", "Lízni 2 karty. Stojí 0. Karma -1.", cost: 0, drawCards: 2, karmaShift: -1) },
-            { "B_27", new CardTemplate("B_27", "Vroucí krev", "Lízni 3 karty, stoji tě 3 HP. Karma -2.", cost: 1, drawCards: 3, karmaShift: -2) },
-            { "B_28", new CardTemplate("B_28", "Bojový pokřik", "Lízni 1 kartu, přidá 4 blok. Karma 0.", cost: 0, drawCards: 1, block: 4, karmaShift: 0) },
-            { "B_29", new CardTemplate("B_29", "Ignorování bolesti", "Přidá 10 bloku. Karma -1.", cost: 1, block: 10, karmaShift: -1) },
+            { "B_26", new CardTemplate("B_26", "Adrenalin", "Lízni 2 karty. Získáš 1 Sílu. Stojí 0. Karma -1.", cost: 0, drawCards: 2, karmaShift: -1, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 1) }) },
+            { "B_27", new CardTemplate("B_27", "Vroucí krev", "Lízni 3 karty, získáš 2 Síly. Karma -2.", cost: 1, drawCards: 3, karmaShift: -2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
+            { "B_28", new CardTemplate("B_28", "Bojový pokřik", "Lízni 1 kartu, aplikuje 2 Zranitelnost (zastrašení). Karma 0.", cost: 0, drawCards: 1, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) },
+            { "B_29", new CardTemplate("B_29", "Ignorování bolesti", "Přidá 10 bloku. Získáš 1 Regeneraci. Karma -1.", cost: 1, block: 10, karmaShift: -1, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 1) }) },
             { "B_30", new CardTemplate("B_30", "Zatnutí zubů", "Přidá 15 bloku. Karma -2.", cost: 2, block: 15, karmaShift: -2) },
             { "B_31", new CardTemplate("B_31", "Krvavý štít", "Přidá 8 bloku, lízni 1 kartu. Karma -1.", cost: 1, block: 8, drawCards: 1, karmaShift: -1) },
-            { "B_32", new CardTemplate("B_32", "Šílenství", "Lízni 4 karty! Karma -3.", cost: 2, drawCards: 4, karmaShift: -3) },
+            { "B_32", new CardTemplate("B_32", "Šílenství", "Lízni 4 karty! Získáš 2 Síly. Karma -3.", cost: 2, drawCards: 4, karmaShift: -3, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
             { "B_33", new CardTemplate("B_33", "Druhej dech", "Vyléčí 10 HP. Karma +1.", cost: 1, heal: 10, karmaShift: 1) }, 
-            { "B_34", new CardTemplate("B_34", "Řev", "Lízni 2 karty, Karma -2.", cost: 1, drawCards: 2, karmaShift: -2) },
+            { "B_34", new CardTemplate("B_34", "Řev", "Lízni 2 karty, aplikuje 2 Oslabení. Karma -2.", cost: 1, drawCards: 2, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 2) }) },
             { "B_35", new CardTemplate("B_35", "Tlustá kůže", "Přidá 12 bloku. Karma 0.", cost: 2, block: 12, karmaShift: 0) },
             { "B_36", new CardTemplate("B_36", "Zběsilost", "Lízni 2 karty. Stojí 0.", cost: 0, drawCards: 2) },
             { "B_37", new CardTemplate("B_37", "Připravenost", "Lízni 3 karty, přidá 5 blok. Karma -1.", cost: 2, drawCards: 3, block: 5, karmaShift: -1) },
             { "B_38", new CardTemplate("B_38", "Poslední vzdor", "Přidá 20 bloku! Karma -2.", cost: 3, block: 20, karmaShift: -2) },
             { "B_39", new CardTemplate("B_39", "Zkrvavená pěst", "Udělí 5 zranění, přidá 5 blok. Karma -1.", cost: 1, damage: 5, block: 5, karmaShift: -1) },
             { "B_40", new CardTemplate("B_40", "Nabuzení", "Lízni 1 kartu, vyléčí 2 HP. Karma 0.", cost: 0, drawCards: 1, heal: 2, karmaShift: 0) },
-
-            // --- Ultimátní zkáza (41-50) ---
             { "B_41", new CardTemplate("B_41", "Zkáza titánů", "Udělí 35 zranění! Karma -5.", cost: 4, damage: 35, karmaShift: -5) },
             { "B_42", new CardTemplate("B_42", "Ničivé tornádo", "Udělí 10 zranění třikrát! Karma -4.", cost: 3, damage: 10, hitCount: 3, karmaShift: -4) },
             { "B_43", new CardTemplate("B_43", "Apokalyptický úder", "Udělí 50 zranění!!! Karma -6.", cost: 5, damage: 50, karmaShift: -6) },
-            { "B_44", new CardTemplate("B_44", "Krvavá lázeň", "Udělí 12 zranění, vyléčí 12 HP. Karma -4.", cost: 3, damage: 12, heal: 12, karmaShift: -4) },
-            { "B_45", new CardTemplate("B_45", "Nezastavitelný", "Přidá 25 bloku, lízni 3 karty. Karma -3.", cost: 3, block: 25, drawCards: 3, karmaShift: -3) },
+            { "B_44", new CardTemplate("B_44", "Krvavá lázeň", "Udělí 12 zranění, vyléčí 12 HP. Získáš 3 Síly. Karma -4.", cost: 3, damage: 12, heal: 12, karmaShift: -4, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 3) }) },
+            { "B_45", new CardTemplate("B_45", "Nezastavitelný", "Přidá 25 bloku, získáš 2 Síly a lízni 3 karty. Karma -3.", cost: 3, block: 25, drawCards: 3, karmaShift: -3, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
             { "B_46", new CardTemplate("B_46", "Ragnarok", "Udělí 15 zranění dvakrát. Karma -5.", cost: 3, damage: 15, hitCount: 2, karmaShift: -5) },
             { "B_47", new CardTemplate("B_47", "Pád do temnoty", "Lízni 5 karet, Karma -5.", cost: 2, drawCards: 5, karmaShift: -5) },
             { "B_48", new CardTemplate("B_48", "Totální destrukce", "Udělí 40 zranění. Karma -5.", cost: 4, damage: 40, karmaShift: -5) },
             { "B_49", new CardTemplate("B_49", "Krveprolití", "Udělí 8 zranění čtyřikrát! Karma -6.", cost: 4, damage: 8, hitCount: 4, karmaShift: -6) },
-            { "B_50", new CardTemplate("B_50", "Poslední soud", "Udělí 60 zranění, ale zabije tě to (později nasimulujeme). Karma -7.", cost: 5, damage: 60, karmaShift: -7) },
+            { "B_50", new CardTemplate("B_50", "Poslední soud", "Udělí 60 zranění. Karma -7.", cost: 5, damage: 60, karmaShift: -7) },
+
             // ==========================================
             // 5. DRUID (OCHRÁNCE) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Útoky přírody a vampirismus (1-20) ---
             { "D_01", new CardTemplate("D_01", "Šlehnutí liánou", "Udělí 4 zranění a přidá 4 blok. Karma +1.", cost: 1, damage: 4, block: 4, karmaShift: 1) },
             { "D_02", new CardTemplate("D_02", "Vysátí života", "Udělí 3 zranění a vyléčí 3 HP. Karma 0.", cost: 1, damage: 3, heal: 3, karmaShift: 0) },
-            { "D_03", new CardTemplate("D_03", "Hod kamenem", "Udělí 8 zranění. Karma 0.", cost: 1, damage: 8, karmaShift: 0) },
-            { "D_04", new CardTemplate("D_04", "Roj včel", "Udělí 2 zranění čtyřikrát. Karma 0.", cost: 1, damage: 2, hitCount: 4, karmaShift: 0) },
-            { "D_05", new CardTemplate("D_05", "Jedovatý trn", "Udělí 5 zranění, lízni 1 kartu. Karma -1.", cost: 1, damage: 5, drawCards: 1, karmaShift: -1) },
+            { "D_03", new CardTemplate("D_03", "Hod kamenem", "Udělí 8 zranění. Aplikuje 1 Zranitelnost. Karma 0.", cost: 1, damage: 8, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
+            { "D_04", new CardTemplate("D_04", "Roj včel", "Udělí 2 zranění čtyřikrát. Aplikuje 2 Jed. Karma 0.", cost: 1, damage: 2, hitCount: 4, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 2) }) },
+            { "D_05", new CardTemplate("D_05", "Jedovatý trn", "Aplikuje 5 Jed, lízni 1 kartu. Karma -1.", cost: 1, drawCards: 1, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 5) }) },
             { "D_06", new CardTemplate("D_06", "Drtivý kmen", "Udělí 14 zranění. Karma 0.", cost: 2, damage: 14, karmaShift: 0) },
-            { "D_07", new CardTemplate("D_07", "Kousnutí vlka", "Udělí 10 zranění. Karma -1.", cost: 1, damage: 10, karmaShift: -1) },
+            { "D_07", new CardTemplate("D_07", "Kousnutí vlka", "Udělí 10 zranění. Aplikuje 3 Jed. Karma -1.", cost: 1, damage: 10, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 3) }) },
             { "D_08", new CardTemplate("D_08", "Medvědí spár", "Udělí 12 zranění, přidá 5 blok. Karma 0.", cost: 2, damage: 12, block: 5, karmaShift: 0) },
             { "D_09", new CardTemplate("D_09", "Písečná bouře", "Udělí 6 zranění dvakrát. Karma 0.", cost: 2, damage: 6, hitCount: 2, karmaShift: 0) },
             { "D_10", new CardTemplate("D_10", "Zemětřesení", "Udělí 15 zranění. Karma -1.", cost: 3, damage: 15, karmaShift: -1) },
@@ -281,12 +250,10 @@ namespace RoguelikeCardGame.Models
             { "D_18", new CardTemplate("D_18", "Výpad šelmy", "Udělí 9 zranění. Karma 0.", cost: 1, damage: 9, karmaShift: 0) },
             { "D_19", new CardTemplate("D_19", "Odveta lesa", "Udělí 11 zranění a přidá 3 blok. Karma 0.", cost: 2, damage: 11, block: 3, karmaShift: 0) },
             { "D_20", new CardTemplate("D_20", "Zatopení", "Udělí 12 zranění. Karma +1.", cost: 2, damage: 12, karmaShift: 1) },
-
-            // --- Obrana, léčení a přírodní růst (21-40) ---
             { "D_21", new CardTemplate("D_21", "Dubová kůra", "Přidá 7 bloku. Karma +1.", cost: 1, block: 7, karmaShift: 1) },
-            { "D_22", new CardTemplate("D_22", "Fotosyntéza", "Vyléčí 5 HP, přidá 5 blok. Karma +2.", cost: 2, heal: 5, block: 5, karmaShift: 2) },
+            { "D_22", new CardTemplate("D_22", "Fotosyntéza", "Vyléčí 5 HP, přidá 5 blok. Dává 2 Regenerace. Karma +2.", cost: 2, heal: 5, block: 5, karmaShift: 2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 2) }) },
             { "D_23", new CardTemplate("D_23", "Bylinky", "Vyléčí 4 HP, lízni 1 kartu. Karma +1.", cost: 1, heal: 4, drawCards: 1, karmaShift: 1) },
-            { "D_24", new CardTemplate("D_24", "Růst", "Lízni 2 karty. Karma +1.", cost: 1, drawCards: 2, karmaShift: 1) },
+            { "D_24", new CardTemplate("D_24", "Růst", "Získáš 1 Sílu a 1 Obratnost. Karma +1.", cost: 1, karmaShift: 1, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 1), new EffectApplication(EffectType.Dexterity, 1) }) },
             { "D_25", new CardTemplate("D_25", "Hustý porost", "Přidá 12 bloku. Karma +1.", cost: 2, block: 12, karmaShift: 1) },
             { "D_26", new CardTemplate("D_26", "Léčivý pramen", "Vyléčí 8 HP. Karma +2.", cost: 1, heal: 8, karmaShift: 2) },
             { "D_27", new CardTemplate("D_27", "Cyklus", "Lízni 2 karty, vyléčí 2 HP. Stojí 0. Karma 0.", cost: 0, drawCards: 2, heal: 2, karmaShift: 0) },
@@ -303,27 +270,24 @@ namespace RoguelikeCardGame.Models
             { "D_38", new CardTemplate("D_38", "Medvědí spánek", "Vyléčí 15 HP, přidá 10 blok. Karma +3.", cost: 3, heal: 15, block: 10, karmaShift: 3) },
             { "D_39", new CardTemplate("D_39", "Zázrak přírody", "Lízni 2 karty, vyléčí 5 HP. Karma +1.", cost: 2, drawCards: 2, heal: 5, karmaShift: 1) },
             { "D_40", new CardTemplate("D_40", "Míza", "Přidá 10 bloku. Karma +1.", cost: 1, block: 10, karmaShift: 1) },
-
-            // --- Ultimátní síly přírody (41-50) ---
-            { "D_41", new CardTemplate("D_41", "Hněv lesa", "Udělí 25 zranění! Karma 0.", cost: 3, damage: 25, karmaShift: 0) },
-            { "D_42", new CardTemplate("D_42", "Živoucí prales", "Přidá 25 bloku! Karma +3.", cost: 3, block: 25, karmaShift: 3) },
-            { "D_43", new CardTemplate("D_43", "Strom života", "Vyléčí 25 HP!!! Karma +5.", cost: 4, heal: 25, karmaShift: 5) },
+            { "D_41", new CardTemplate("D_41", "Hněv lesa", "Udělí 25 zranění! Aplikuje 10 Jed. Karma 0.", cost: 3, damage: 25, karmaShift: 0, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 10) }) },
+            { "D_42", new CardTemplate("D_42", "Živoucí prales", "Přidá 25 bloku! Dává 4 Regenerace. Karma +3.", cost: 3, block: 25, karmaShift: 3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 4) }) },
+            { "D_43", new CardTemplate("D_43", "Strom života", "Vyléčí 25 HP!!! Dává 5 Regenerace. Karma +5.", cost: 4, heal: 25, karmaShift: 5, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 5) }) },
             { "D_44", new CardTemplate("D_44", "Sluneční erupce", "Udělí 15 zranění, vyléčí 10 HP. Karma +4.", cost: 4, damage: 15, heal: 10, karmaShift: 4) },
-            { "D_45", new CardTemplate("D_45", "Volání divočiny", "Lízni 5 karet. Karma +2.", cost: 3, drawCards: 5, karmaShift: 2) },
+            { "D_45", new CardTemplate("D_45", "Volání divočiny", "Lízni 5 karet. Získáš 2 Síly. Karma +2.", cost: 3, drawCards: 5, karmaShift: 2, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
             { "D_46", new CardTemplate("D_46", "Přírodní katastrofa", "Udělí 10 zranění třikrát! Karma -2.", cost: 4, damage: 10, hitCount: 3, karmaShift: -2) },
             { "D_47", new CardTemplate("D_47", "Splynutí s přírodou", "Vyléčí 15 HP, přidá 15 blok, lízni 2 karty. Karma +4.", cost: 5, heal: 15, block: 15, drawCards: 2, karmaShift: 4) },
             { "D_48", new CardTemplate("D_48", "Pohlcující liány", "Udělí 20 zranění, přidá 10 blok. Karma +1.", cost: 3, damage: 20, block: 10, karmaShift: 1) },
             { "D_49", new CardTemplate("D_49", "Znovuzrození lesa", "Vyléčí 20 HP, lízni 3 karty. Karma +3.", cost: 4, heal: 20, drawCards: 3, karmaShift: 3) },
             { "D_50", new CardTemplate("D_50", "Matka příroda", "Udělí 30 zranění, vyléčí 15 HP! Karma +5.", cost: 5, damage: 30, heal: 15, karmaShift: 5) },
+
             // ==========================================
             // 6. ROGUE (KARMICKÝ VRAH) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Rychlé dýky a levné útoky (1-20) ---
             { "R_01", new CardTemplate("R_01", "Rychlá dýka", "Udělí 4 zranění. Karma -1.", cost: 1, damage: 4, karmaShift: -1) },
-            { "R_02", new CardTemplate("R_02", "Dvojitý sek", "Udělí 3 zranění dvakrát. Karma -1.", cost: 1, damage: 3, hitCount: 2, karmaShift: -1) },
-            { "R_03", new CardTemplate("R_03", "Zákeřná rána", "Udělí 8 zranění. Karma -2.", cost: 1, damage: 8, karmaShift: -2) },
-            { "R_04", new CardTemplate("R_04", "Jedovatá čepel", "Udělí 5 zranění, lízni 1 kartu. Karma -1.", cost: 1, damage: 5, drawCards: 1, karmaShift: -1) },
+            { "R_02", new CardTemplate("R_02", "Dvojitý sek", "Udělí 3 zranění dvakrát. Aplikuje 1 Zranitelnost. Karma -1.", cost: 1, damage: 3, hitCount: 2, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
+            { "R_03", new CardTemplate("R_03", "Zákeřná rána", "Udělí 8 zranění. Aplikuje 2 Oslabení. Karma -2.", cost: 1, damage: 8, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 2) }) },
+            { "R_04", new CardTemplate("R_04", "Jedovatá čepel", "Udělí 5 zranění. Aplikuje 5 Jed. Karma -1.", cost: 1, damage: 5, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Poison, 5) }) },
             { "R_05", new CardTemplate("R_05", "Bodnutí do zad", "Udělí 12 zranění! Karma -3.", cost: 1, damage: 12, karmaShift: -3) },
             { "R_06", new CardTemplate("R_06", "Vrhací nože", "Udělí 2 zranění třikrát. Karma 0.", cost: 1, damage: 2, hitCount: 3, karmaShift: 0) },
             { "R_07", new CardTemplate("R_07", "Přepadení", "Udělí 6 zranění za 0 energie! Karma -2.", cost: 0, damage: 6, karmaShift: -2) },
@@ -340,10 +304,8 @@ namespace RoguelikeCardGame.Models
             { "R_18", new CardTemplate("R_18", "Odvedení pozornosti", "Udělí 4 zranění. Karma +3.", cost: 1, damage: 4, karmaShift: 3) },
             { "R_19", new CardTemplate("R_19", "Fantomový úder", "Udělí 10 zranění. Karma -1.", cost: 1, damage: 10, karmaShift: -1) },
             { "R_20", new CardTemplate("R_20", "Záblesk dýky", "Udělí 8 zranění. Karma +1.", cost: 1, damage: 8, karmaShift: 1) },
-
-            // --- Úhyby, Lízání a Extrémní výkyvy Karmy (21-40) ---
-            { "R_21", new CardTemplate("R_21", "Úhyb", "Přidá 6 bloku. Karma +3.", cost: 1, block: 6, karmaShift: 3) },
-            { "R_22", new CardTemplate("R_22", "Kouřová clona", "Přidá 8 bloku, lízni 1 kartu. Karma +2.", cost: 1, block: 8, drawCards: 1, karmaShift: 2) },
+            { "R_21", new CardTemplate("R_21", "Úhyb", "Přidá 6 bloku. Získáš 1 Obratnost. Karma +3.", cost: 1, block: 6, karmaShift: 3, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 1) }) },
+            { "R_22", new CardTemplate("R_22", "Kouřová clona", "Aplikuje 3 Oslabení, lízni 1 kartu. Karma +2.", cost: 1, drawCards: 1, karmaShift: 2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 3) }) },
             { "R_23", new CardTemplate("R_23", "Příprava", "Lízni 3 karty! Stojí 0! Karma 0.", cost: 0, drawCards: 3, karmaShift: 0) }, 
             { "R_24", new CardTemplate("R_24", "Akrobacie", "Přidá 4 bloku, lízni 2 karty. Karma +1.", cost: 1, block: 4, drawCards: 2, karmaShift: 1) },
             { "R_25", new CardTemplate("R_25", "Stíny", "Přidá 10 bloku. Karma -2.", cost: 1, block: 10, karmaShift: -2) },
@@ -362,10 +324,8 @@ namespace RoguelikeCardGame.Models
             { "R_38", new CardTemplate("R_38", "Mistr úniků", "Přidá 20 bloku! Karma +4.", cost: 3, block: 20, karmaShift: 4) },
             { "R_39", new CardTemplate("R_39", "Předtucha", "Lízni 2 karty, přidá 5 blok. Karma +1.", cost: 1, drawCards: 2, block: 5, karmaShift: 1) },
             { "R_40", new CardTemplate("R_40", "Odhalení slabiny", "Lízni 3 karty. Karma +2.", cost: 2, drawCards: 3, karmaShift: 2) },
-
-            // --- Ultimátní asasínské techniky (41-50) ---
-            { "R_41", new CardTemplate("R_41", "Tanec stínů", "Udělí 5 zranění pětkrát! Karma -5.", cost: 3, damage: 5, hitCount: 5, karmaShift: -5) },
-            { "R_42", new CardTemplate("R_42", "Nekonečné kombo", "Lízni 5 karet! Karma 0.", cost: 2, drawCards: 5, karmaShift: 0) },
+            { "R_41", new CardTemplate("R_41", "Tanec stínů", "Udělí 5 zranění pětkrát! Aplikuje 3 Zranitelnost. Karma -5.", cost: 3, damage: 5, hitCount: 5, karmaShift: -5, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 3) }) },
+            { "R_42", new CardTemplate("R_42", "Nekonečné kombo", "Lízni 5 karet! Získáš 2 Síly. Karma 0.", cost: 2, drawCards: 5, karmaShift: 0, selfEffects: new List<EffectApplication> { new EffectApplication(EffectType.Strength, 2) }) },
             { "R_43", new CardTemplate("R_43", "Atentát", "Udělí 40 zranění! Karma -4.", cost: 3, damage: 40, karmaShift: -4) },
             { "R_44", new CardTemplate("R_44", "Přízrak", "Přidá 30 bloku!!! Karma +5.", cost: 3, block: 30, karmaShift: 5) },
             { "R_45", new CardTemplate("R_45", "Krvavá stopa", "Udělí 15 zranění dvakrát, lízni 2 karty. Karma -3.", cost: 3, damage: 15, hitCount: 2, drawCards: 2, karmaShift: -3) },
@@ -378,10 +338,8 @@ namespace RoguelikeCardGame.Models
             // ==========================================
             // 7. BARD (SUPPORT) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Lehké útoky a oslabující melodie (1-15) ---
-            { "Bd_01", new CardTemplate("Bd_01", "Falešný tón", "Udělí 3 zranění. Karma -1.", cost: 1, damage: 3, karmaShift: -1) },
-            { "Bd_02", new CardTemplate("Bd_02", "Ostrý akord", "Udělí 5 zranění. Karma +1.", cost: 1, damage: 5, karmaShift: 1) },
+            { "Bd_01", new CardTemplate("Bd_01", "Falešný tón", "Udělí 3 zranění. Aplikuje 1 Oslabení. Karma -1.", cost: 1, damage: 3, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 1) }) },
+            { "Bd_02", new CardTemplate("Bd_02", "Ostrý akord", "Udělí 5 zranění. Aplikuje 1 Zranitelnost. Karma +1.", cost: 1, damage: 5, karmaShift: 1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 1) }) },
             { "Bd_03", new CardTemplate("Bd_03", "Rytmický úder", "Udělí 2 zranění dvakrát. Karma 0.", cost: 1, damage: 2, hitCount: 2, karmaShift: 0) },
             { "Bd_04", new CardTemplate("Bd_04", "Rušivá píseň", "Udělí 4 zranění, lízni 1 kartu. Karma -1.", cost: 1, damage: 4, drawCards: 1, karmaShift: -1) },
             { "Bd_05", new CardTemplate("Bd_05", "Bojový marš", "Udělí 6 zranění, přidá 3 blok. Karma +1.", cost: 1, damage: 6, block: 3, karmaShift: 1) },
@@ -395,11 +353,9 @@ namespace RoguelikeCardGame.Models
             { "Bd_13", new CardTemplate("Bd_13", "Rána loutnou", "Udělí 15 zranění. Karma -1.", cost: 2, damage: 15, karmaShift: -1) },
             { "Bd_14", new CardTemplate("Bd_14", "Sólo na bubny", "Udělí 5 zranění za 0 energie. Karma 0.", cost: 0, damage: 5, karmaShift: 0) },
             { "Bd_15", new CardTemplate("Bd_15", "Závěrečný tón", "Udělí 20 zranění. Karma -2.", cost: 3, damage: 20, karmaShift: -2) },
-
-            // --- Masivní podpora, štíty a léčení (16-35) ---
-            { "Bd_16", new CardTemplate("Bd_16", "Píseň naděje", "Vyléčí 4 HP, přidá 4 blok. Karma +3.", cost: 1, heal: 4, block: 4, karmaShift: 3) },
+            { "Bd_16", new CardTemplate("Bd_16", "Píseň naděje", "Vyléčí 4 HP. Dává 2 Regenerace. Karma +3.", cost: 1, heal: 4, karmaShift: 3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 2) }) },
             { "Bd_17", new CardTemplate("Bd_17", "Zklidňující melodie", "Přidá 8 bloku. Karma +2.", cost: 1, block: 8, karmaShift: 2) },
-            { "Bd_18", new CardTemplate("Bd_18", "Hymna ochrany", "Přidá 15 bloku (rozdělí se). Karma +3.", cost: 2, block: 15, karmaShift: 3) },
+            { "Bd_18", new CardTemplate("Bd_18", "Hymna ochrany", "Přidá 15 bloku. Dává 2 Obratnosti. Karma +3.", cost: 2, block: 15, karmaShift: 3, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Dexterity, 2) }) },
             { "Bd_19", new CardTemplate("Bd_19", "Píseň světla", "Vyléčí 8 HP. Karma +2.", cost: 1, heal: 8, karmaShift: 2) },
             { "Bd_20", new CardTemplate("Bd_20", "Povzbuzení", "Lízni 2 karty. Karma +1.", cost: 1, drawCards: 2, karmaShift: 1) },
             { "Bd_21", new CardTemplate("Bd_21", "Ukolébavka", "Přidá 10 bloku, lízni 1 kartu. Karma +2.", cost: 2, block: 10, drawCards: 1, karmaShift: 2) },
@@ -417,8 +373,6 @@ namespace RoguelikeCardGame.Models
             { "Bd_33", new CardTemplate("Bd_33", "Balada o štítu", "Přidá 8 bloku za 0 energie! Karma +2.", cost: 0, block: 8, karmaShift: 2) },
             { "Bd_34", new CardTemplate("Bd_34", "Píseň znovuzrození", "Vyléčí 10 HP, lízni 1 kartu. Karma +3.", cost: 2, heal: 10, drawCards: 1, karmaShift: 3) },
             { "Bd_35", new CardTemplate("Bd_35", "Harmonie duší", "Vyléčí 6 HP, přidá 6 blok. Karma +2.", cost: 1, heal: 6, block: 6, karmaShift: 2) },
-
-            // --- Drastická manipulace s Karmou (36-45) ---
             { "Bd_36", new CardTemplate("Bd_36", "Píseň zmaru", "Udělí 3 zranění. Karma -4! (Pro pomoc Warlockovi).", cost: 1, damage: 3, karmaShift: -4) },
             { "Bd_37", new CardTemplate("Bd_37", "Zpěv zoufalství", "Lízni 2 karty. Karma -3.", cost: 1, drawCards: 2, karmaShift: -3) },
             { "Bd_38", new CardTemplate("Bd_38", "Svatý chorál", "Přidá 5 bloku. Karma +5! (Pro pomoc Paladinovi).", cost: 1, block: 5, karmaShift: 5) },
@@ -429,23 +383,20 @@ namespace RoguelikeCardGame.Models
             { "Bd_43", new CardTemplate("Bd_43", "Rozladění", "Udělí 5 zranění. Karma -3.", cost: 1, damage: 5, karmaShift: -3) },
             { "Bd_44", new CardTemplate("Bd_44", "Dokonalé naladění", "Lízni 3 karty. Karma +3.", cost: 2, drawCards: 3, karmaShift: 3) },
             { "Bd_45", new CardTemplate("Bd_45", "Karmický obrat", "Udělí 2 zranění, přidá 2 blok. Karma 0.", cost: 0, damage: 2, block: 2, karmaShift: 0) },
-
-            // --- Ultimátní orchestr (46-50) ---
-            { "Bd_46", new CardTemplate("Bd_46", "Óda na radost", "Vyléčí 25 HP! Karma +6.", cost: 4, heal: 25, karmaShift: 6) },
-            { "Bd_47", new CardTemplate("Bd_47", "Requiem", "Udělí 30 zranění! Karma -6.", cost: 4, damage: 30, karmaShift: -6) },
+            { "Bd_46", new CardTemplate("Bd_46", "Óda na radost", "Vyléčí 25 HP! Dává 10 Regenerace. Karma +6.", cost: 4, heal: 25, karmaShift: 6, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Regen, 10) }) },
+            { "Bd_47", new CardTemplate("Bd_47", "Requiem", "Udělí 30 zranění! Aplikuje 5 Oslabení. Karma -6.", cost: 4, damage: 30, karmaShift: -6, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Weak, 5) }) },
             { "Bd_48", new CardTemplate("Bd_48", "Symfonie štítů", "Přidá 40 bloku!!! Karma +4.", cost: 4, block: 40, karmaShift: 4) },
             { "Bd_49", new CardTemplate("Bd_49", "Mistrovské dílo", "Vyléčí 15 HP, přidá 15 blok, lízni 3 karty. Karma +5.", cost: 5, heal: 15, block: 15, drawCards: 3, karmaShift: 5) },
             { "Bd_50", new CardTemplate("Bd_50", "Poslední přídavek", "Lízni 7 karet! Karma 0.", cost: 3, drawCards: 7, karmaShift: 0) },
+
             // ==========================================
             // 8. PYROMANCER (PYROMANT) - 50 UNIKÁTNÍCH KARET
             // ==========================================
-
-            // --- Rychlé plameny a jiskry (1-20) ---
-            { "Py_01", new CardTemplate("Py_01", "Ohnivá koule", "Udělí 12 zranění. Karma -1.", cost: 2, damage: 12, karmaShift: -1) },
+            { "Py_01", new CardTemplate("Py_01", "Ohnivá koule", "Udělí 12 zranění. Aplikuje 2 Hoření. Karma -1.", cost: 2, damage: 12, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 2) }) },
             { "Py_02", new CardTemplate("Py_02", "Jiskra", "Udělí 4 zranění za 0 energie. Karma 0.", cost: 0, damage: 4, karmaShift: 0) },
-            { "Py_03", new CardTemplate("Py_03", "Zápal", "Udělí 7 zranění. Karma -1.", cost: 1, damage: 7, karmaShift: -1) },
+            { "Py_03", new CardTemplate("Py_03", "Zápal", "Aplikuje 5 Hoření. Karma -1.", cost: 1, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 5) }) },
             { "Py_04", new CardTemplate("Py_04", "Plamínek", "Udělí 3 zranění dvakrát. Karma 0.", cost: 1, damage: 3, hitCount: 2, karmaShift: 0) },
-            { "Py_05", new CardTemplate("Py_05", "Ohnivý bič", "Udělí 9 zranění. Karma -2.", cost: 1, damage: 9, karmaShift: -2) },
+            { "Py_05", new CardTemplate("Py_05", "Ohnivý bič", "Udělí 9 zranění. Aplikuje 2 Zranitelnost. Karma -2.", cost: 1, damage: 9, karmaShift: -2, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Vulnerable, 2) }) },
             { "Py_06", new CardTemplate("Py_06", "Vzplanutí", "Udělí 5 zranění, lízni 1 kartu. Karma -1.", cost: 1, damage: 5, drawCards: 1, karmaShift: -1) },
             { "Py_07", new CardTemplate("Py_07", "Sežehnutí", "Udělí 14 zranění. Karma -2.", cost: 2, damage: 14, karmaShift: -2) },
             { "Py_08", new CardTemplate("Py_08", "Ohnivý proud", "Udělí 4 zranění třikrát. Karma -1.", cost: 2, damage: 4, hitCount: 3, karmaShift: -1) },
@@ -461,9 +412,7 @@ namespace RoguelikeCardGame.Models
             { "Py_18", new CardTemplate("Py_18", "Výbuch hněvu", "Udělí 12 zranění. Karma -3.", cost: 1, damage: 12, karmaShift: -3) },
             { "Py_19", new CardTemplate("Py_19", "Pekelný šleh", "Udělí 25 zranění. Karma -4.", cost: 3, damage: 25, karmaShift: -4) },
             { "Py_20", new CardTemplate("Py_20", "Zpopelnění", "Udělí 30 zranění! Karma -5.", cost: 4, damage: 30, karmaShift: -5) },
-
-            // --- Ohnivé štíty, Lízání a Manipulace hořením (21-40) ---
-            { "Py_21", new CardTemplate("Py_21", "Ohnivý štít", "Přidá 8 bloku, udělí 3 zranění. Karma -1.", cost: 1, block: 8, damage: 3, karmaShift: -1) },
+            { "Py_21", new CardTemplate("Py_21", "Ohnivý štít", "Přidá 8 bloku. Aplikuje 3 Hoření. Karma -1.", cost: 1, block: 8, karmaShift: -1, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 3) }) },
             { "Py_22", new CardTemplate("Py_22", "Zeď plamenů", "Přidá 12 bloku. Karma -2.", cost: 2, block: 12, karmaShift: -2) },
             { "Py_23", new CardTemplate("Py_23", "Kauterizace", "Vyléčí 6 HP, ale Karma -2.", cost: 1, heal: 6, karmaShift: -2) }, 
             { "Py_24", new CardTemplate("Py_24", "Rozdmýchání", "Lízni 2 karty. Karma -1.", cost: 1, drawCards: 2, karmaShift: -1) },
@@ -483,10 +432,8 @@ namespace RoguelikeCardGame.Models
             { "Py_38", new CardTemplate("Py_38", "Sopka", "Udělí 10 zranění, přidá 10 blok. Karma -3.", cost: 3, damage: 10, block: 10, karmaShift: -3) },
             { "Py_39", new CardTemplate("Py_39", "Zrychlené hoření", "Lízni 4 karty. Karma -3.", cost: 2, drawCards: 4, karmaShift: -3) },
             { "Py_40", new CardTemplate("Py_40", "Plamenná aura", "Přidá 5 bloku. Stojí 0. Karma 0.", cost: 0, block: 5, karmaShift: 0) },
-
-            // --- Ultimátní ohnivé peklo (41-50) ---
-            { "Py_41", new CardTemplate("Py_41", "Inferno", "Udělí 10 zranění třikrát!!! Karma -4.", cost: 3, damage: 10, hitCount: 3, karmaShift: -4) },
-            { "Py_42", new CardTemplate("Py_42", "Supernova", "Udělí 40 zranění všem (zatím cíli)! Karma -6.", cost: 4, damage: 40, karmaShift: -6) },
+            { "Py_41", new CardTemplate("Py_41", "Inferno", "Udělí 10 zranění třikrát!!! Aplikuje 10 Hoření. Karma -4.", cost: 3, damage: 10, hitCount: 3, karmaShift: -4, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 10) }) },
+            { "Py_42", new CardTemplate("Py_42", "Supernova", "Udělí 40 zranění všem! Aplikuje 5 Hoření. Karma -6.", cost: 4, damage: 40, karmaShift: -6, targetEffects: new List<EffectApplication> { new EffectApplication(EffectType.Flame, 5) }) },
             { "Py_43", new CardTemplate("Py_43", "Meteor", "Udělí 50 zranění! Karma -5.", cost: 4, damage: 50, karmaShift: -5) },
             { "Py_44", new CardTemplate("Py_44", "Ohnivá bouře", "Udělí 5 zranění osmkrát!!! Karma -7.", cost: 5, damage: 5, hitCount: 8, karmaShift: -7) },
             { "Py_45", new CardTemplate("Py_45", "Spálení na prach", "Udělí 35 zranění, lízni 2 karty. Karma -4.", cost: 4, damage: 35, drawCards: 2, karmaShift: -4) },
@@ -494,7 +441,7 @@ namespace RoguelikeCardGame.Models
             { "Py_47", new CardTemplate("Py_47", "Srdce sopky", "Lízni 6 karet! Karma -4.", cost: 3, drawCards: 6, karmaShift: -4) },
             { "Py_48", new CardTemplate("Py_48", "Plamenný kruh", "Přidá 30 bloku, udělí 15 zranění. Karma -3.", cost: 4, block: 30, damage: 15, karmaShift: -3) },
             { "Py_49", new CardTemplate("Py_49", "Armagedon", "Udělí 60 zranění! Karma -8.", cost: 5, damage: 60, karmaShift: -8) },
-            { "Py_50", new CardTemplate("Py_50", "Konečný plamen", "Udělí 100 zranění, ale stojí veškerou energii a Karmu! Karma -10.", cost: 5, damage: 100, karmaShift: -10) },
+            { "Py_50", new CardTemplate("Py_50", "Konečný plamen", "Udělí 100 zranění! Karma -10.", cost: 5, damage: 100, karmaShift: -10) },
         };
     }
 }

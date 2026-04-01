@@ -1,5 +1,7 @@
+// --- OPRAVENÉ PŘIPOJENÍ: Automatické znovupřipojení při výpadku ---
 const connection = new signalR.HubConnectionBuilder()
     .withUrl("https://karma-the-shared-burden.onrender.com/gamehub") 
+    .withAutomaticReconnect() // Tohle zachrání hru před spadnutím při mikro-výpadku internetu
     .build();
 
 let playerName = ""; let playerClass = ""; let currentRoomName = ""; 
@@ -17,6 +19,22 @@ let currentTeamData = [];
 let selectedTargetCard = null; 
 let selectedTargetAllyCard = null; 
 let currentMapVotes = {}; 
+
+// --- LOGOVÁNÍ VÝPADKŮ PŘIPOJENÍ ---
+connection.onreconnecting(error => {
+    console.warn("Spojení se serverem bylo přerušeno. Pokouším se znovu připojit...", error);
+    logMessage("⚠️ Ztráta spojení. Hra se zkouší znovu připojit...");
+});
+
+connection.onreconnected(connectionId => {
+    console.log("Znovu připojeno!");
+    logMessage("✅ Spojení bylo úspěšně obnoveno!");
+});
+
+connection.onclose(error => {
+    console.error("Spojení bylo trvale ukončeno.", error);
+    logMessage("❌ Spojení se serverem bylo trvale ztraceno. Bude potřeba obnovit stránku (F5).");
+});
 
 // --- NAČTENÍ JMÉNA Z PAMĚTI PROHLÍŽEČE ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -57,16 +75,22 @@ const getTypeString = (typeVal) => {
     return typeMap[typeVal] || "Encounter";
 };
 
+// --- DYNAMICKÉ VYLEPŠENÍ KARET ---
 function getCardData(cardId) {
+    let card = cardDatabase[cardId];
+    if (card) return { ...card, id: cardId };
+    
     let isUpgraded = cardId.endsWith("+");
     let baseId = isUpgraded ? cardId.slice(0, -1) : cardId;
     let base = cardDatabase[baseId];
+    
     if (!base) return { id: cardId, name: cardId, cost: 1, karmaShift: 0, damage: 5, description: "" };
+    
     if (isUpgraded) {
         return {
             id: cardId, name: "⭐ " + base.name,
             damage: (base.damage > 0) ? base.damage + 3 : 0, block: (base.block > 0) ? base.block + 3 : 0, heal: (base.heal > 0) ? base.heal + 2 : 0,
-            cost: Math.max(0, base.cost - 1), karmaShift: base.karmaShift, description: base.description + " (Vylepšeno)"
+            cost: Math.max(0, base.cost - 1), karmaShift: base.karmaShift, description: base.description + " (Automatické vylepšení)"
         };
     }
     return { ...base, id: cardId };
@@ -103,12 +127,10 @@ function getCredentials() {
     return true;
 }
 
-// --- OPRAVA: BEZPEČNÉ PŘIPOJENÍ (zabraňuje chybě s HubConnection) ---
 async function startConnectionIfNotStarted() {
     if (connection.state === signalR.HubConnectionState.Disconnected) {
         await connection.start();
-    } else if (connection.state === signalR.HubConnectionState.Connecting) {
-        // Pokud už se připojuje, "vyhodíme chybu" aby se nepokusil poslat data do prázdna
+    } else if (connection.state === signalR.HubConnectionState.Connecting || connection.state === signalR.HubConnectionState.Reconnecting) {
         throw new Error("Připojování k serveru probíhá, vydržte chvíli...");
     }
 }
@@ -120,7 +142,7 @@ async function createLobby() {
         await connection.invoke("CreateLobby", currentRoomName, playerName, playerClass);
         showWaitingRoom();
     } catch (err) {
-        console.warn(err.message); // Necháme to jen jako varování, hra nespadne
+        console.warn(err.message); 
     }
 }
 
@@ -206,6 +228,7 @@ connection.on("EnteredNode", (nodeTypeRaw, nodeData, enemiesArray) => {
         toggleUI("battle"); 
     } 
 });
+
 // --- EVENTS & SHOP & REST ---
 connection.on("EnterEvent", (eventData) => {
     toggleUI("event");
@@ -214,7 +237,7 @@ connection.on("EnterEvent", (eventData) => {
     const optionsContainer = document.getElementById("event-options"); optionsContainer.innerHTML = "";
     
     let opts = safeGet(eventData, 'options', 'Options') || [];
-    let eventId = safeGet(eventData, 'id', 'Id'); // ZMĚNA: Získáme ID tohoto eventu
+    let eventId = safeGet(eventData, 'id', 'Id'); 
     
     opts.forEach(opt => {
         const btn = document.createElement("button");
@@ -222,7 +245,6 @@ connection.on("EnterEvent", (eventData) => {
         btn.style.cssText = "padding: 15px 30px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;";
         btn.onclick = () => {
             optionsContainer.innerHTML = "<p>Vybráno! Čekáme na ostatní nebo posun...</p>";
-            // ZMĚNA: Posíláme i eventId zpět na server
             connection.invoke("ResolveEventOption", currentRoomName, playerName, eventId, safeGet(opt, 'id', 'Id')).catch(err => console.error(err));
         };
         optionsContainer.appendChild(btn);
@@ -308,7 +330,7 @@ function chooseRestUpgrade(cardId) { closeUpgradeModal(); connection.invoke("Res
 
 connection.on("RestActionCompleted", (newHp, newDeck) => { myHp = newHp; myStartingDeck = newDeck; updateStatsUI(); logMessage("Odpočinek u táboráku úspěšně dokončen."); toggleUI("map"); renderMap(); });
 
-// --- BOJ A CÍLENÍ (LÉČENÍ SPOLUHRÁČŮ / ÚTOK NA MONSTRA) ---
+// --- BOJ A CÍLENÍ ---
 function playCard(cardId, karmaShift, damage) {
     if (isGameOver) return; 
     if (turnEnded) { alert("Už jsi ukončil tah!"); return; }
@@ -355,14 +377,26 @@ function executeCardPlay(cardId, karmaShift, damage, cardCost, targetEnemyId, ta
     
     updateStatsUI(); renderHand(); renderEnemies(currentEnemiesArray); renderTeam(currentTeamData);
     
-    connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage, targetEnemyId || "", targetPlayerName || "").catch(err => console.error(err));
+    // Zapojeno bezpečné volání přes try-catch pro klid na duši
+    try {
+        connection.invoke("SelectCard", currentRoomName, playerName, cardId, karmaShift, damage, targetEnemyId || "", targetPlayerName || "");
+    } catch (err) {
+        console.error(err);
+        logMessage("⚠️ Nepodařilo se zahrát kartu, zkontroluj připojení.");
+    }
 }
 
 function endTurn() {
     if (turnEnded) return; turnEnded = true; selectedTargetCard = null; selectedTargetAllyCard = null;
     document.getElementById("end-turn-btn").disabled = true; document.getElementById("end-turn-btn").style.backgroundColor = "gray";
     renderEnemies(currentEnemiesArray); renderTeam(currentTeamData);
-    connection.invoke("PlayerReady", currentRoomName, playerName).catch(err => console.error(err));
+    
+    try {
+        connection.invoke("PlayerReady", currentRoomName, playerName);
+    } catch (err) {
+        console.error(err);
+        logMessage("⚠️ Nepodařilo se ukončit tah, zkontroluj připojení.");
+    }
 }
 
 // --- ODMĚNY PO BOJI ---
@@ -534,11 +568,25 @@ function toggleUI(state) {
     else if (state === "rest") { showElement("rest-screen"); }
 }
 
-// --- MAPA ---
+// --- MAPA S LEGENDOU ---
 function renderMap() {
     const mapContainer = document.getElementById("nodes-list"); if (!mapContainer) return;
     mapContainer.innerHTML = ""; mapContainer.style.position = "relative"; mapContainer.style.display = "flex";
     mapContainer.style.flexDirection = "column-reverse"; mapContainer.style.gap = "50px"; mapContainer.style.padding = "20px";
+
+    const legend = document.createElement("div");
+    legend.style.cssText = "position: absolute; right: 20px; top: 20px; background: rgba(44, 62, 80, 0.9); padding: 15px; border-radius: 8px; border: 2px solid #f1c40f; color: white; font-size: 14px; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-align: left;";
+    legend.innerHTML = `
+        <h4 style="margin: 0 0 10px 0; text-align: center; color: #f1c40f; border-bottom: 1px solid #f1c40f; padding-bottom: 5px;">Legenda</h4>
+        <div style="margin-bottom: 5px;">⚔️ Běžný souboj</div>
+        <div style="margin-bottom: 5px;">👹 Elitní souboj</div>
+        <div style="margin-bottom: 5px;">👑 Boss</div>
+        <div style="margin-bottom: 5px;">💰 Poklad</div>
+        <div style="margin-bottom: 5px;">⛺ Táborák</div>
+        <div style="margin-bottom: 5px;">🛒 Obchod</div>
+        <div>📜 Událost</div>
+    `;
+    mapContainer.appendChild(legend);
 
     if (!gameMap || gameMap.length === 0) return;
 
