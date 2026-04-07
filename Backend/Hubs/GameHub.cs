@@ -53,7 +53,7 @@ namespace RoguelikeCardGame.Hubs
             if (_activeRooms.ContainsKey(roomName)) { await Clients.Caller.SendAsync("LobbyError", "Místnost už existuje!"); return; }
             
             var newRoom = new GameRoom(roomName);
-            // ZDE PROPOJUJEME SERVER S 3D SMYČKOU Z GAMEROOMU
+            // PROPOJENÍ SERVERU S 3D SMYČKOU Z GAMEROOMU
             newRoom.OnTickUpdate += async (room) => await Broadcast3DState(room);
             newRoom.OnEnemyAttack += async (room, enemy) => await HandleEnemyRealTimeAttack(room, enemy);
             
@@ -150,7 +150,7 @@ namespace RoguelikeCardGame.Hubs
 
                 room.CurrentNodeId = nodeId;
                 
-                // Před bojem vyčistíme efekty a lízneme
+                // Vyčištění před bojem
                 foreach (var p in room.Players)
                 {
                     p.Mana = p.MaxMana;
@@ -178,7 +178,7 @@ namespace RoguelikeCardGame.Hubs
                             TemplateName = template.Name, MaxHp = template.MaxHp, Hp = template.MaxHp,
                             CurrentAction = EnemyDatabase.GetRandomActionForEnemy(template.Name),
                             AttackCooldown = template.AttackCooldown,
-                            CurrentCooldown = template.AttackCooldown + rng.Next(-500, 500) // Drobný rozptyl
+                            CurrentCooldown = template.AttackCooldown + rng.Next(-500, 500)
                         });
                     }
 
@@ -186,7 +186,7 @@ namespace RoguelikeCardGame.Hubs
                     foreach (var p in room.Players)
                     {
                         RelicManager.ApplyCombatStartRelics(p, room, room.ActiveEnemies);
-                        RelicManager.ApplyTurnStartRelics(p, room); // Start tahu pro pasivní manu atd.
+                        RelicManager.ApplyTurnStartRelics(p, room); 
                         await Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, room.ActiveEnemies);
                     }
                     
@@ -199,7 +199,7 @@ namespace RoguelikeCardGame.Hubs
                 // NEBOJOVÉ MÍSTNOSTI
                 else 
                 {
-                    room.StopBattle(); // Pokud jsme v obchodě, 3D timer neběží
+                    room.StopBattle(); // Zastavení 3D timeru mimo boj
                     targetNode.IsCompleted = true;
                     await Clients.Group(roomName).SendAsync("EnteredNode", targetNode.Type.ToString(), targetNode, new List<ActiveEnemy>());
 
@@ -248,10 +248,9 @@ namespace RoguelikeCardGame.Hubs
         }
 
         // --------------------------------------------------------
-        // 3D REAL-TIME AKCE (Nové metody pro Three.js)
+        // 3D REAL-TIME AKCE & KOMBAT
         // --------------------------------------------------------
         
-        // Frontend volá toto, když hráč mačká WASD
         public async Task MovePlayer(string roomName, string playerName, float x, float y, float z)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
@@ -264,26 +263,50 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // Timer z GameRoomu zavolá tuto metodu každých 100ms
         private async Task Broadcast3DState(GameRoom room)
         {
             var playerData = room.Players.Select(p => new { name = p.Name, x = p.X, y = p.Y, z = p.Z, hp = p.Hp, mana = p.Mana }).ToList();
             var enemyData = room.ActiveEnemies.Where(e => e.Hp > 0).Select(e => new { id = e.Id, x = e.X, y = e.Y, z = e.Z, hp = e.Hp }).ToList();
-
-            // Pošleme surová data o pozicích a maně do Three.js
             await Clients.Group(room.RoomName).SendAsync("Update3DState", playerData, enemyData);
         }
 
-        // ZDE STŘÍLÍŠ KARTY V REÁLNÉM ČASE
-        public async Task CastCard(string roomName, string playerName, string cardId, int karmaShift, string targetEnemyId)
+        // ========================================================
+        // CAST CARD - TADY JSOU VŠECHNY TVÉ AKČNÍ MECHANIKY ZPĚT!
+        // ========================================================
+        public async Task CastCard(string roomName, string playerName, string cardId, int karmaShift, string targetEnemyId, string targetPlayerName)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
             {
                 var player = room.Players.FirstOrDefault(p => p.Name == playerName);
                 if (player != null && player.Hp > 0 && player.Hand.Contains(cardId))
                 {
-                    CardTemplate? fullCard = GetCardData(cardId); // Nyní správně používá ? (Nullable)
-                    if (fullCard == null || player.Mana < fullCard.Cost) return; // Nemá manu
+                    // Dynamické vytvoření/načtení karty
+                    CardTemplate? fullCard = null;
+                    if (cardId.EndsWith("+") && UpgradedCardsDatabase.UpgradedCards.TryGetValue(cardId, out var upgCard))
+                    {
+                        fullCard = upgCard;
+                    }
+                    else
+                    {
+                        string baseCardId = cardId.EndsWith("+") ? cardId.Substring(0, cardId.Length - 1) : cardId;
+                        if (CardDatabase.Cards.TryGetValue(baseCardId, out var baseCard))
+                        {
+                            if (cardId.EndsWith("+"))
+                            {
+                                fullCard = new CardTemplate(
+                                    baseCard.Id + "+", "⭐ " + baseCard.Name, baseCard.Description + " (Vylepšeno)",
+                                    Math.Max(0, baseCard.Cost - 1), baseCard.KarmaShift,
+                                    baseCard.Damage > 0 ? baseCard.Damage + 3 : 0, 
+                                    baseCard.Block > 0 ? baseCard.Block + 3 : 0, 
+                                    baseCard.Heal > 0 ? baseCard.Heal + 2 : 0, 
+                                    baseCard.DrawCards, baseCard.HitCount, baseCard.TargetEffects, baseCard.SelfEffects
+                                );
+                            }
+                            else fullCard = baseCard;
+                        }
+                    }
+
+                    if (fullCard == null || player.Mana < fullCard.Cost) return; // Nemá manu nebo karta neexistuje
 
                     // Odečtení many, zahození karty
                     player.Mana -= fullCard.Cost;
@@ -294,22 +317,39 @@ namespace RoguelikeCardGame.Hubs
 
                     RelicManager.ApplyCardPlayedRelics(player, room, fullCard);
 
-                    // 1. Self efekty a Blok
+                    // --- AKČNÍ MECHANIKA 1: COMBO BONUS ---
+                    int comboBonus = (player.CardsPlayedThisTurn > 2) ? (player.CardsPlayedThisTurn - 2) * 2 : 0;
+
+                    // Zpracování Self Efektů a Obrany
                     foreach(var eff in fullCard.SelfEffects) player.AddEffect(eff.Type, eff.Amount);
                     int dex = player.Effects.ContainsKey(EffectType.Dexterity) ? player.Effects[EffectType.Dexterity] : 0;
                     player.Block += RelicManager.ModifyBlock(fullCard.Block > 0 ? fullCard.Block + dex : 0, player, room);
 
-                    // 2. Útok a dosah (3D vzdálenost)
-                    if (fullCard.Damage > 0 || fullCard.TargetEffects.Count > 0)
+                    // Zpracování Cíleného Léčení
+                    if (fullCard.Heal > 0)
+                    {
+                        var targetPlayer = string.IsNullOrEmpty(targetPlayerName) ? player : room.Players.FirstOrDefault(p => p.Name == targetPlayerName);
+                        if (targetPlayer != null) 
+                        {
+                            targetPlayer.Hp += fullCard.Heal;
+                            if (targetPlayer.Hp > targetPlayer.MaxHp) targetPlayer.Hp = targetPlayer.MaxHp;
+                            foreach(var eff in fullCard.TargetEffects) targetPlayer.AddEffect(eff.Type, eff.Amount);
+                        }
+                    }
+
+                    bool explosionTriggered = false;
+                    int explosionDamage = 0;
+                    bool adrenalineTriggered = false;
+
+                    // Zpracování Útoku a Vzdálenosti ve 3D
+                    if (fullCard.Damage > 0 || (fullCard.TargetEffects.Count > 0 && fullCard.Heal == 0))
                     {
                         var target = room.ActiveEnemies.FirstOrDefault(e => e.Id == targetEnemyId && e.Hp > 0);
                         if (target != null)
                         {
-                            // FYZIKA: Výpočet vzdálenosti hráče a nestvůry (Pythagorova věta ve 3D)
+                            // Vzdálenost
                             float distance = (float)Math.Sqrt(Math.Pow(target.X - player.X, 2) + Math.Pow(target.Y - player.Y, 2) + Math.Pow(target.Z - player.Z, 2));
-                            
-                            // Pokud je karta na blízko a stojíš daleko, zrušíme útok (Miss)
-                            float cardRange = fullCard.Damage > 10 ? 3.0f : 15.0f; // Silné rány na blízko, slabší na dálku (příklad)
+                            float cardRange = fullCard.Damage > 10 ? 4.0f : 15.0f; // Těžké rány nablízko, kouzla na dálku
 
                             if (distance <= cardRange)
                             {
@@ -318,54 +358,86 @@ namespace RoguelikeCardGame.Hubs
                                 if (fullCard.Damage > 0)
                                 {
                                     int str = player.Effects.ContainsKey(EffectType.Strength) ? player.Effects[EffectType.Strength] : 0;
-                                    int actualDamage = RelicManager.ModifyDamage(fullCard.Damage + str, player, room);
                                     
-                                    // Vliv karmy
-                                    if (room.CurrentKarma >= 10) actualDamage = (int)(actualDamage * 0.8);
-                                    else if (room.CurrentKarma <= -10) actualDamage = (int)(actualDamage * 1.3);
+                                    // Přidáme Combo Bonus do základu
+                                    int baseDmg = fullCard.Damage + str + comboBonus; 
+                                    
+                                    if (player.Effects.ContainsKey(EffectType.Weak) && player.Effects[EffectType.Weak] > 0) 
+                                        baseDmg = (int)(baseDmg * 0.75);
+
+                                    baseDmg = RelicManager.ModifyDamage(baseDmg, player, room);
+
+                                    double karmaMultiplier = 1.0;
+                                    if (room.CurrentKarma >= 10) karmaMultiplier = 0.8;
+                                    else if (room.CurrentKarma <= -10) karmaMultiplier = 1.3;
+
+                                    int actualDamage = (int)Math.Round(baseDmg * karmaMultiplier) * (fullCard.HitCount > 0 ? fullCard.HitCount : 1);
+                                    
+                                    if (target.Effects.ContainsKey(EffectType.Vulnerable) && target.Effects[EffectType.Vulnerable] > 0)
+                                        actualDamage = (int)(actualDamage * 1.5);
 
                                     target.Hp -= actualDamage;
 
+                                    // --- AKČNÍ MECHANIKA 2: ELEMENTÁLNÍ EXPLOZE ---
+                                    if (target.Effects.ContainsKey(EffectType.Poison) && target.Effects[EffectType.Poison] > 0 &&
+                                        target.Effects.ContainsKey(EffectType.Flame) && target.Effects[EffectType.Flame] > 0)
+                                    {
+                                        explosionTriggered = true;
+                                        explosionDamage = (target.Effects[EffectType.Poison] + target.Effects[EffectType.Flame]) * 3;
+                                        target.Hp -= explosionDamage;
+                                        target.Effects[EffectType.Poison] = 0;
+                                        target.Effects[EffectType.Flame] = 0;
+                                    }
+
+                                    // --- AKČNÍ MECHANIKA 3: ADRENALIN PŘI ZABITÍ ---
                                     if (target.Hp <= 0)
                                     {
                                         target.Hp = 0;
                                         RelicManager.OnEnemyKilled(player, room);
+                                        player.Mana += 1;
+                                        player.DrawCards(1);
+                                        adrenalineTriggered = true;
+                                        
                                         await CheckEndBattle(room);
                                     }
                                     
-                                    // Pošleme do 3D zprávu, ať se tam vykreslí zásah/výbuch
                                     await Clients.Group(roomName).SendAsync("SpawnHitEffect", target.X, target.Y, target.Z, actualDamage);
                                 }
                             }
                             else
                             {
-                                // Hráč kouzlil do vzduchu (miss)
                                 await Clients.Client(player.ConnectionId).SendAsync("ShowActionMessage", "Jsi příliš daleko!");
                             }
                         }
                     }
 
-                    // 3. Lízání nových karet
                     if (fullCard.DrawCards > 0) player.DrawCards(fullCard.DrawCards);
 
-                    // Poslat update UI hráči
-                    await Clients.Client(player.ConnectionId).SendAsync("ReceiveNewTurnState", player.Hand, player.Mana, player.Gold, player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, room.ActiveEnemies);
+                    // --- ODESLÁNÍ AKČNÍHO LOGU A STAVU ---
+                    var summaryForUI = new List<string>();
+                    if (comboBonus > 0 && fullCard.Damage > 0) summaryForUI.Add($"🔥 Combo úder! +{comboBonus} poškození!");
+                    if (explosionTriggered) summaryForUI.Add($"💥 EXPLOZE! Směs jedu a ohně explodovala za {explosionDamage} DMG!");
+                    if (adrenalineTriggered) summaryForUI.Add($"⚡ ADRENALIN! Za zabití získáváš 1 Manu a lížeš kartu!");
+
+                    await Clients.Group(roomName).SendAsync("CardPlayedLog", playerName, cardId);
+                    await Clients.Group(roomName).SendAsync("TurnResolved", summaryForUI, fullCard?.Damage ?? 0, room.CurrentKarma, room.ActiveEnemies);
                     await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                    await Clients.Client(player.ConnectionId).SendAsync("ReceiveNewTurnState", player.Hand, player.Mana, player.Gold, player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, room.ActiveEnemies);
                 }
             }
         }
 
-        // Timer z GameRoomu zavolá toto, když monstrum dosáhne cooldownu
+        // --------------------------------------------------------
+        // AI NEPŘÁTEL 
+        // --------------------------------------------------------
         private async Task HandleEnemyRealTimeAttack(GameRoom room, ActiveEnemy enemy)
         {
             var action = enemy.CurrentAction;
             
-            // Monstrum si vybere náhodného živého hráče jako cíl
             var alivePlayers = room.Players.Where(p => p.Hp > 0).ToList();
             if (alivePlayers.Count == 0) return;
             var targetPlayer = alivePlayers[new Random().Next(alivePlayers.Count)];
 
-            // FYZIKA: Dosáhne monstrum na hráče?
             var template = EnemyDatabase.Enemies.FirstOrDefault(e => e.Name == enemy.TemplateName);
             float range = template != null ? template.AttackRange : 2.0f;
             float distance = (float)Math.Sqrt(Math.Pow(targetPlayer.X - enemy.X, 2) + Math.Pow(targetPlayer.Y - enemy.Y, 2) + Math.Pow(targetPlayer.Z - enemy.Z, 2));
@@ -376,21 +448,16 @@ namespace RoguelikeCardGame.Hubs
                 {
                     int dmg = Math.Max(0, action.DamageToAll - targetPlayer.Block);
                     targetPlayer.Hp -= dmg;
-                    if (targetPlayer.Hp <= 0) targetPlayer.Hp = 0; // Smrt hráče
+                    if (targetPlayer.Hp <= 0) targetPlayer.Hp = 0; 
                     
                     await Clients.Group(room.RoomName).SendAsync("SpawnHitEffect", targetPlayer.X, targetPlayer.Y, targetPlayer.Z, dmg);
                     await Clients.Group(room.RoomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
                 }
             }
-            else
-            {
-                // Pokud je monstrum daleko, mělo by k němu jít (pohyb monster dořešíme ve frontend Three.js nebo v backend updatu pozic)
-            }
 
             enemy.CurrentAction = EnemyDatabase.GetRandomActionForEnemy(enemy.TemplateName);
         }
 
-        // Kontrola, zda boj neskončil
         private async Task CheckEndBattle(GameRoom room)
         {
             bool allDead = room.ActiveEnemies.All(e => e.Hp <= 0);
@@ -411,7 +478,6 @@ namespace RoguelikeCardGame.Hubs
                         RelicManager.ApplyCombatEndRelics(p, room);
                         p.Gold += goldReward;
 
-                        // Výběr karet pro odměnu
                         string classPrefix = GetPrefixForClass(p.HeroClass);
                         var classSpecificCards = CardDatabase.Cards.Values.Where(c => c.Id.StartsWith(classPrefix) || c.Id.StartsWith("Z_")).ToList();
                         if (classSpecificCards.Count < 3) classSpecificCards = CardDatabase.Cards.Values.ToList();
@@ -439,23 +505,14 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // --------------------------------------------------------
-        // POMOCNÉ FUNKCE 
-        // --------------------------------------------------------
-        private CardTemplate? GetCardData(string cardId)
-        {
-            if (cardId.EndsWith("+") && UpgradedCardsDatabase.UpgradedCards.TryGetValue(cardId, out var upgCard)) return upgCard;
-            string baseCardId = cardId.EndsWith("+") ? cardId.Substring(0, cardId.Length - 1) : cardId;
-            if (CardDatabase.Cards.TryGetValue(baseCardId, out var baseCard)) return baseCard;
-            return null;
-        }
-
         private string GetPrefixForClass(string heroClass)
         {
             switch (heroClass) { case "Paladin": return "P_"; case "Warlock": return "W_"; case "Monk": return "M_"; case "Berserker": return "B_"; case "Druid": return "D_"; case "Rogue": return "R_"; case "Bard": return "Bd_"; case "Pyromancer": return "Py_"; default: return "Z_"; }
         }
         
-        // Zde jsou vloženy tvé původní metody beze změn:
+        // --------------------------------------------------------
+        // NEBOJOVÉ AKCE (Obchod, Oheň, Eventy)
+        // --------------------------------------------------------
         public async Task RestPlaceAction(string roomName, string playerName, string actionType, string cardId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
