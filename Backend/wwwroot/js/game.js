@@ -306,6 +306,18 @@ function onMouseMove(event) {
 function onKeyDown(event) { if(keys.hasOwnProperty(event.key.toLowerCase())) keys[event.key.toLowerCase()] = true; }
 function onKeyUp(event) { if(keys.hasOwnProperty(event.key.toLowerCase())) keys[event.key.toLowerCase()] = false; }
 
+// --- Klávesové zkratky (1, 2, 3...) pro hraní karet ve 3D ---
+document.addEventListener("keydown", (event) => {
+    if (!is3DActive) return;
+    const num = parseInt(event.key);
+    // Pokud hráč zmáčkl číslo a má tolik karet v ruce
+    if (!isNaN(num) && num >= 1 && num <= myHand.length) {
+        const cardId = myHand[num - 1]; // Pole začíná od 0
+        const cData = getCardData(cardId);
+        playCard(cardId, cData.karmaShift, cData.damage);
+    }
+});
+
 // --- SMYČKA 3D SCÉNY ---
 function animate3D() {
     if (!is3DActive) return;
@@ -771,20 +783,16 @@ function renderMap() {
         mapContainer.appendChild(row);
     }
     
-    // ZDE JE OPRAVA PRO ČÁRY (Spouštíme bez zbytečného parametru)
     setTimeout(() => drawMapLines(), 100);
 }
 
-// ZDE JE OPRAVENÁ FUNKCE PRO KRESLENÍ ČAR
 function drawMapLines() {
-    // Čáry nyní cílíme do hlavního okna map-container, aby se nerozhodily souřadnice
     const container = document.getElementById("map-container"); 
     if (!container) return;
 
     let oldSvg = document.getElementById("map-svg"); if (oldSvg) oldSvg.remove();
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.id = "map-svg"; 
-    // SVG teď překryje celé černé okno s mapou
     svg.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;";
     
     const containerRect = container.getBoundingClientRect();
@@ -799,7 +807,6 @@ function drawMapLines() {
             const toEl = document.getElementById(`node-${targetId}`); if (!toEl) return;
             const toRect = toEl.getBoundingClientRect();
 
-            // Výpočet souřadnic relativně k hlavnímu oknu mapy
             const x1 = (fromRect.left + fromRect.width / 2) - containerRect.left; 
             const y1 = (fromRect.top + fromRect.height / 2) - containerRect.top;
             const x2 = (toRect.left + toRect.width / 2) - containerRect.left; 

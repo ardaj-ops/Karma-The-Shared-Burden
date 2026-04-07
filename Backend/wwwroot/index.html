@@ -68,40 +68,36 @@
                 <div id="nodes-list" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 15px;"></div>
             </div>
 
-            <div id="ui-layer" class="hidden">
+            <div id="ui-layer" class="hidden" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none;">
                 
-                <div id="crosshair" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 28px; font-weight: bold; pointer-events: none;">+</div>
-                <div id="target-info" style="position: fixed; top: 55%; left: 50%; transform: translateX(-50%); color: #e74c3c; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 3px black; pointer-events: none;"></div>
+                <div id="crosshair" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 28px; font-weight: bold; pointer-events: none; z-index: 10;">+</div>
+                <div id="target-info" style="position: absolute; top: 55%; left: 50%; transform: translateX(-50%); color: #e74c3c; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 3px black; pointer-events: none; z-index: 10;"></div>
 
-                <div id="battle-hud">
-                    <div id="enemies-container" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;"></div>
-                    
-                    <div style="display: flex; justify-content: space-around; background: rgba(44, 62, 80, 0.85); color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto; border: 1px solid #34495e;">
+                <div id="battle-hud" style="position: absolute; top: 0; width: 100%; pointer-events: none;">
+                    <div style="display: flex; justify-content: space-around; background: rgba(44, 62, 80, 0.7); color: white; padding: 10px; border-radius: 5px; width: 80%; margin: 10px auto; border: 1px solid #34495e;">
                         <div id="karma-bar">Společná Karma: <strong id="karma-value">0</strong> <span id="karma-status"> (Rovnováha ⚖️)</span></div>
                         <div id="mana-bar" style="color: #3498db;">Tvoje Mana: <strong id="mana-value">0</strong> / 3</div>
                         <div id="gold-bar" style="color: #f1c40f;">Zlaťáky: <strong id="gold-value">0</strong> 💰</div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-around; background: rgba(39, 174, 96, 0.85); color: white; padding: 10px; border-radius: 5px; width: 60%; margin: 10px auto; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                    <div style="display: flex; justify-content: space-around; background: rgba(39, 174, 96, 0.7); color: white; padding: 10px; border-radius: 5px; width: 60%; margin: 5px auto; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                         <div>❤️ Tvé HP: <strong id="hero-hp">0</strong> / <span id="hero-max-hp">0</span></div>
                         <div style="color: #ecf0f1;">🛡️ Tvůj Blok: <strong id="hero-block">0</strong></div>
                     </div>
                 </div>
 
-                <div id="hand-wrapper" style="width: 80%; margin: 20px auto; text-align: center; box-sizing: border-box;">
-                    <div style="display: flex; justify-content: space-between; width: 100%; margin: 0 auto; color: white; font-weight: bold; font-size: 16px; background: rgba(52, 73, 94, 0.85); padding: 10px; border-radius: 5px;">
-                        <div id="deck-count" style="cursor: pointer; text-decoration: underline;" onclick="showDrawPile()">🎴 V balíčku: ?</div>
-                        <div id="discard-count" style="cursor: pointer; text-decoration: underline;" onclick="showDiscardPile()">🗑️ Odhozeno: ?</div>
-                    </div>
-                    <h2 id="hand-title" style="color: white; margin-top: 15px; text-shadow: 1px 1px 2px black;">Tvoje ruka</h2>
-                    <div id="hand-container" style="display: flex; gap: 10px; padding: 15px; justify-content: center; min-height: 120px; background: rgba(236, 240, 241, 0.85); border-radius: 5px; flex-wrap: wrap;"></div>
-                    
-                    <button id="end-turn-btn" class="hidden" onclick="endTurn()" style="margin-top: 20px; padding: 15px 40px; font-size: 20px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer;">⌛ Ukončit tah</button>
+                <div style="position: absolute; left: 10px; top: 30%; width: 250px;">
+                    <h3 style="color: #bdc3c7; margin-bottom: 5px; text-shadow: 1px 1px 2px black;">Historie událostí</h3>
+                    <ul id="log" style="background: rgba(44, 62, 80, 0.7); color: white; padding: 10px; border-radius: 5px; border: 1px solid #34495e; max-height: 150px; overflow-y: hidden; text-align: left; font-size: 12px; list-style: none;"></ul>
                 </div>
 
-                <div style="width: 80%; margin: 20px auto;">
-                    <h3 style="color: #bdc3c7; margin-bottom: 5px; text-shadow: 1px 1px 2px black;">Historie událostí</h3>
-                    <ul id="log" style="background: rgba(249, 249, 249, 0.85); color: #333; padding: 15px; border-radius: 5px; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; text-align: left; font-family: monospace;"></ul>
+                <div id="hand-wrapper" style="position: absolute; bottom: 0; width: 100%; text-align: center; box-sizing: border-box; pointer-events: auto;">
+                    <div style="display: flex; justify-content: space-between; width: 60%; margin: 0 auto; color: white; font-weight: bold; font-size: 14px; background: rgba(52, 73, 94, 0.8); padding: 5px 15px; border-radius: 5px 5px 0 0;">
+                        <div id="deck-count" style="cursor: pointer; text-decoration: underline;" onclick="showDrawPile()">🎴 V balíčku: ?</div>
+                        <h4 style="margin:0; color:#f1c40f;">(Zkratky: 1, 2, 3...)</h4>
+                        <div id="discard-count" style="cursor: pointer; text-decoration: underline;" onclick="showDiscardPile()">🗑️ Odhozeno: ?</div>
+                    </div>
+                    <div id="hand-container" style="display: flex; gap: 10px; padding: 15px; justify-content: center; min-height: 120px; background: rgba(236, 240, 241, 0.8); flex-wrap: wrap;"></div>
                 </div>
 
             </div>
