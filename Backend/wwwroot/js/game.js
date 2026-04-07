@@ -496,9 +496,9 @@ function toggleUI(state) {
     ["map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(hideElement);
     
     if (state === "battle") {
-        document.getElementById("ui-layer").style.display = "block";
+        showElement("ui-layer"); // TOTO OPRAVUJE CHYBĚJÍCÍ BOJ!
     } else if (state === "map") { 
-        document.getElementById("ui-layer").style.display = "none";
+        hideElement("ui-layer");
         showElement("map-container"); 
     } 
     else if (state === "shop") { showElement("shop-screen"); } 
@@ -763,7 +763,7 @@ function renderMap() {
                 btn.onmouseout = () => { btn.style.transform = "scale(1)"; btn.style.backgroundColor = "#2ecc71"; };
                 btn.onclick = () => { connection.invoke("VoteNextNode", currentRoomName, playerName, nodeId).catch(err => console.error(err)); };
             } else {
-                btn.style.backgroundColor = "#34495e"; btn.style.opacity = "0.4"; btn.disabled = true;
+                btn.style.backgroundColor = "#34495e"; btn.style.opacity = "0.8"; btn.disabled = true;
             }
             
             btnWrapper.appendChild(btn); row.appendChild(btnWrapper);
