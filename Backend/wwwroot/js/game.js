@@ -770,13 +770,23 @@ function renderMap() {
         });
         mapContainer.appendChild(row);
     }
-    setTimeout(() => drawMapLines(mapContainer), 100);
+    
+    // ZDE JE OPRAVA PRO ČÁRY (Spouštíme bez zbytečného parametru)
+    setTimeout(() => drawMapLines(), 100);
 }
 
-function drawMapLines(container) {
+// ZDE JE OPRAVENÁ FUNKCE PRO KRESLENÍ ČAR
+function drawMapLines() {
+    // Čáry nyní cílíme do hlavního okna map-container, aby se nerozhodily souřadnice
+    const container = document.getElementById("map-container"); 
+    if (!container) return;
+
     let oldSvg = document.getElementById("map-svg"); if (oldSvg) oldSvg.remove();
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.id = "map-svg"; svg.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;";
+    svg.id = "map-svg"; 
+    // SVG teď překryje celé černé okno s mapou
+    svg.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;";
+    
     const containerRect = container.getBoundingClientRect();
 
     gameMap.forEach(node => {
@@ -789,8 +799,11 @@ function drawMapLines(container) {
             const toEl = document.getElementById(`node-${targetId}`); if (!toEl) return;
             const toRect = toEl.getBoundingClientRect();
 
-            const x1 = (fromRect.left + fromRect.width / 2) - containerRect.left; const y1 = (fromRect.top + fromRect.height / 2) - containerRect.top;
-            const x2 = (toRect.left + toRect.width / 2) - containerRect.left; const y2 = (toRect.top + toRect.height / 2) - containerRect.top;
+            // Výpočet souřadnic relativně k hlavnímu oknu mapy
+            const x1 = (fromRect.left + fromRect.width / 2) - containerRect.left; 
+            const y1 = (fromRect.top + fromRect.height / 2) - containerRect.top;
+            const x2 = (toRect.left + toRect.width / 2) - containerRect.left; 
+            const y2 = (toRect.top + toRect.height / 2) - containerRect.top;
 
             const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("x1", x1); line.setAttribute("y1", y1); line.setAttribute("x2", x2); line.setAttribute("y2", y2);
@@ -802,5 +815,6 @@ function drawMapLines(container) {
             svg.appendChild(line);
         });
     });
+    
     container.appendChild(svg);
 }
