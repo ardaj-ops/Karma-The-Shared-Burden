@@ -66,10 +66,18 @@ function onMouseMove(event) {
 function onKeyDown(event) { if(keys.hasOwnProperty(event.key.toLowerCase())) keys[event.key.toLowerCase()] = true; }
 function onKeyUp(event) { if(keys.hasOwnProperty(event.key.toLowerCase())) keys[event.key.toLowerCase()] = false; }
 
-// --- Klávesové zkratky (1, 2, 3...) pro hraní karet ve 3D ---
+// --- Klávesové zkratky (1, 2, 3...) i s Českou klávesnicí (+, ě, š...) ---
 document.addEventListener("keydown", (event) => {
     if (!is3DActive) return;
-    const num = parseInt(event.key);
+    
+    let num = parseInt(event.key);
+    
+    // Podpora pro českou horní řadu kláves
+    const czechKeys = { '+': 1, 'ě': 2, 'š': 3, 'č': 4, 'ř': 5, 'ž': 6, 'ý': 7, 'á': 8, 'í': 9, 'é': 0 };
+    if (czechKeys[event.key.toLowerCase()]) {
+        num = czechKeys[event.key.toLowerCase()];
+    }
+
     if (!isNaN(num) && num >= 1 && num <= myHand.length) {
         const cardId = myHand[num - 1]; 
         const cData = getCardData(cardId);
