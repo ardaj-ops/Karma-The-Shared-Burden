@@ -3,232 +3,211 @@
 ========================================= */
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    background-color: #111; /* Změněno na velmi tmavou, kdyby 3D selhalo */
+    background-color: #1e272e; 
     color: white; 
     text-align: center; 
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Zabrání scrollbarům při 3D zobrazení */
+    overflow: hidden; /* OPRAVA PRO 3D: Skryje posuvníky, aby obrazovka neujížděla */
 }
 
 /* Bezpečnostní třída pro garanci skrytí prvků */
-.hidden { display: none !important; }
-
-/* Textové pomocné třídy */
-.text-danger { color: #e74c3c; }
-.text-muted { font-style: italic; color: #7f8c8d; }
-.text-mana { color: #3498db; }
-.text-gold { color: #f1c40f; }
-.text-block { color: #ecf0f1; }
-
-/* =========================================
-   3D CANVAS A PŘEKRYVNÉ UI (HUD)
-========================================= */
-#game-canvas { 
-    position: absolute; 
-    top: 0; left: 0; 
-    width: 100vw; height: 100vh; 
-    z-index: 1; 
+.hidden { 
+    display: none !important; 
 }
 
-#ui-layer { 
-    position: absolute; 
-    top: 0; left: 0; 
-    width: 100vw; height: 100vh; 
-    z-index: 10; 
-    pointer-events: none; /* Důležité: umožní klikat "skrz" UI na 3D objekty */
+/* Vlastní hezčí scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
 }
-
-.interactive-ui { 
-    pointer-events: auto; /* Třída pro UI, na které se MÁ dát kliknout (Karty, tlačítka) */
+::-webkit-scrollbar-track {
+    background: #2c3e50; 
 }
-
-/* Zaměřovač a informace o cíli */
-#crosshair {
-    position: absolute; 
-    top: 50%; left: 50%; 
-    transform: translate(-50%, -50%); 
-    color: rgba(255,255,255,0.5); 
-    font-size: 24px; 
-    font-weight: bold; 
-    pointer-events: none;
+::-webkit-scrollbar-thumb {
+    background: #8e44ad; 
+    border-radius: 4px;
 }
-
-#target-info {
-    position: absolute; 
-    top: 55%; left: 50%; 
-    transform: translateX(-50%); 
-    color: #e74c3c; 
-    font-weight: bold; 
-    text-shadow: 1px 1px 2px black;
-}
-
-/* Horní a spodní HUD lišty */
-.hud-panel {
-    position: absolute; 
-    top: 10px; left: 50%; 
-    transform: translateX(-50%); 
-    display: flex; gap: 20px; 
-    background: rgba(0,0,0,0.7); 
-    padding: 10px 20px; 
-    border-radius: 10px; 
-}
-
-#bottom-hud {
-    position: absolute; 
-    bottom: 20px; left: 50%; 
-    transform: translateX(-50%); 
-    width: 80%; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center;
-}
-
-.deck-info {
-    display: flex; 
-    justify-content: space-between; 
-    width: 100%; 
-    margin-bottom: 10px; 
-    background: rgba(0,0,0,0.5); 
-    padding: 5px; 
-    border-radius: 5px;
-}
-
-.deck-info div {
-    cursor: pointer;
-    text-decoration: underline;
-}
-
-#hand-container {
-    display: flex; 
-    gap: 10px; 
-    justify-content: center; 
-    min-height: 140px;
-}
-
-/* Vyskakovací okna nad 3D plátnem (Mapa, Eventy) */
-.overlay-panel {
-    position: absolute; 
-    top: 10%; left: 10%; 
-    background: #34495e; 
-    padding: 20px; 
-    border-radius: 5px; 
-    width: 80%; 
-    z-index: 100; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+::-webkit-scrollbar-thumb:hover {
+    background: #9b59b6; 
 }
 
 /* =========================================
-   FORMULÁŘE, LOBBY A OBECNÁ TLAČÍTKA
+   ANIMACE (KEYFRAMES)
 ========================================= */
-.ui-panel {
-    position: relative; z-index: 100; 
-    width: 80%; margin: 50px auto; 
-    background: #ecf0f1; color: #2c3e50;
-    padding: 30px; border-radius: 10px; 
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
 }
 
-.input-field {
-    padding: 10px; font-size: 16px; 
-    margin: 10px; width: 30%; 
-    border: 1px solid #bdc3c7; border-radius: 5px;
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
 }
 
-.btn {
-    padding: 15px 30px; font-size: 18px; 
-    color: white; border: none; border-radius: 5px; 
-    cursor: pointer; transition: 0.3s;
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
-.btn-create { background: #27ae60; margin-right: 10px; }
-.btn-create:hover { background: #2ecc71; }
-.btn-join { background: #2980b9; }
-.btn-join:hover { background: #3498db; }
-.btn-start { background: #e67e22; margin-top: 20px; }
-.btn-start:hover { background: #d35400; }
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
 
-.hero-selection { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
-.hero-btn { padding: 10px 20px; font-size: 16px; background: #34495e; }
-.hero-btn:hover { background: #1abc9c; transform: translateY(-3px); box-shadow: 0 5px 10px rgba(26, 188, 156, 0.4); }
-
-.players-list { list-style: none; padding: 0; font-size: 18px; }
+/* =========================================
+   UI KONTEJNERY (Herní okna)
+========================================= */
+#battle-hud, #map-container, #reward-screen, #hand-wrapper, #team-container, #shop-screen, #event-screen, #rest-screen {
+    animation: fadeInScale 0.4s ease-out forwards;
+}
 
 /* =========================================
    KARTY A JEJICH EFEKTY
 ========================================= */
 .card { 
-    background: #2c3e50; 
-    border: 2px solid #f1c40f; 
-    border-radius: 8px; 
-    padding: 10px; width: 100px; 
     display: inline-block; 
     transition: all 0.2s ease-out;
     box-shadow: 0 6px 12px rgba(0,0,0,0.4);
-    position: relative; overflow: hidden;
-    user-select: none;
+    position: relative;
+    overflow: hidden;
 }
 
 .card:hover { 
     transform: translateY(-15px) scale(1.05) !important; 
     box-shadow: 0 12px 24px rgba(0,0,0,0.6) !important;
-    background: #34495e;
     z-index: 10;
 }
 
-.card-cost { 
-    background: #3498db; border-radius: 50%; 
-    width: 25px; height: 25px; line-height: 25px; 
-    font-weight: bold; margin: 0 auto 5px auto; 
-}
-
 .card::after {
-    content: ''; position: absolute;
+    content: '';
+    position: absolute;
     top: 0; left: -100%; width: 50%; height: 100%;
     background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
-    transform: skewX(-25deg); transition: 0.5s;
+    transform: skewX(-25deg);
+    transition: 0.5s;
 }
-.card:hover::after { left: 150%; }
+.card:hover::after {
+    left: 150%;
+}
+
+/* =========================================
+   TÝM A NEPŘÁTELÉ (Dýchání / Vznášení)
+========================================= */
+#team-container > div {
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255,255,255,0.1);
+    animation: float 4s ease-in-out infinite;
+}
+
+#team-container > div:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.5) !important;
+    border-color: rgba(255,255,255,0.5);
+}
+
+#enemies-container > div {
+    transition: all 0.3s ease;
+    border: 2px solid #e74c3c;
+    animation: float 2.5s ease-in-out infinite alternate;
+}
+
+#enemies-container > div:nth-child(even) { animation-delay: 0.5s; animation-duration: 3s; }
+#enemies-container > div:nth-child(3n) { animation-delay: 1s; animation-duration: 2.2s; }
+
+#enemies-container > div:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.8) !important;
+    border-color: #ff7675;
+}
 
 /* =========================================
    MAPA A UZLY
 ========================================= */
-.nodes-grid { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 15px; }
-
-#nodes-list button { position: relative; transition: all 0.3s ease !important; }
-#nodes-list button:not([disabled]) { animation: pulse-green 2s infinite; }
-#nodes-list button:not([disabled]):hover { transform: scale(1.15) !important; box-shadow: 0 0 20px #2ecc71 !important; z-index: 5; }
-#nodes-list button[disabled] { opacity: 0.6; filter: grayscale(100%); }
-#nodes-list div { animation: fadeInScale 0.5s ease-out; }
-
-/* =========================================
-   ANIMACE A LOG
-========================================= */
-@keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
-@keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-
-/* LOGOVACÍ OKNO */
-#combat-log-container {
-    position: absolute; bottom: 20px; left: 20px; 
-    width: 300px; max-height: 150px; overflow-y: hidden; 
-    background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; 
-    pointer-events: none;
+#nodes-list button {
+    position: relative;
+    transition: all 0.3s ease !important;
 }
 
+#nodes-list button:not([disabled]) {
+    animation: pulse-green 2s infinite; 
+}
+
+#nodes-list button:not([disabled]):hover {
+    transform: scale(1.15) !important;
+    box-shadow: 0 0 20px #2ecc71 !important;
+    z-index: 5;
+}
+
+#nodes-list button[disabled] {
+    opacity: 0.6;
+    filter: grayscale(100%);
+}
+
+#nodes-list div {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+/* =========================================
+   OSTATNÍ PRVKY
+========================================= */
+#karma-bar {
+    transition: all 0.5s ease;
+}
+
+.hero-btn { 
+    padding: 10px 20px; 
+    font-size: 16px; 
+    background: #34495e; 
+    color: white; 
+    border: 2px solid transparent; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
+.hero-btn:hover { 
+    background: #1abc9c; 
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(26, 188, 156, 0.4);
+}
+
+/* LOGOVACÍ OKNO */
 #log { 
-    list-style-type: none; padding: 0; margin: 0; 
-    text-align: left; color: #ecf0f1; font-family: monospace;
+    list-style-type: none; 
+    padding: 15px; 
+    margin: 0; 
+    text-align: left; 
+    background: #2c3e50 !important; 
+    color: #ecf0f1 !important;
+    border: 1px solid #34495e !important;
 }
 
 #log li {
-    padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.2);
-    animation: slideInLeft 0.3s ease-out forwards; font-size: 13px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #34495e;
+    animation: slideInLeft 0.3s ease-out forwards;
+    font-size: 14px;
 }
-#log li:last-child { border-bottom: none; }
 
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #2c3e50; }
-::-webkit-scrollbar-thumb { background: #8e44ad; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #9b59b6; }
+#log li:last-child {
+    border-bottom: none;
+}
+
+/* =========================================
+   DOPLNĚNO: 3D PRVKY A ZAMĚŘOVAČ
+========================================= */
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10;
+    pointer-events: none; /* Umožní prokliknout skrze UI do 3D hry */
+}
+
+/* Tuto třídu přiřadíme v JS kartám, aby na ně šlo i přes pointer-events:none klikat */
+.interactive-ui {
+    pointer-events: auto;
+}
