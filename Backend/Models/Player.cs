@@ -21,6 +21,11 @@ namespace RoguelikeCardGame.Models
         // --- EKONOMIKA ---
         public int Gold { get; set; } = 50;
 
+        // --- 3D FYZIKA A POZICE ---
+        public float X { get; set; } = 0f;
+        public float Y { get; set; } = 0f;
+        public float Z { get; set; } = 0f;
+
         // --- DECK SYSTÉM ---
         public List<string> StartingDeck { get; set; } = new List<string>();
         public List<string> DrawPile { get; set; } = new List<string>();
@@ -71,6 +76,11 @@ namespace RoguelikeCardGame.Models
             
             Mana = MaxMana; 
             Hp = MaxHp;
+            
+            // Resetování pozice na začátku hry
+            X = 0f;
+            Y = 0f;
+            Z = 0f;
             
             ShuffleDeck();
         }

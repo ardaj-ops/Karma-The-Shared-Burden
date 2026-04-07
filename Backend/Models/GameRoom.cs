@@ -2,10 +2,40 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Timers; // NOVÉ: Pro real-time smyčku
 
 namespace RoguelikeCardGame.Models
 {
     public enum NodeType { Encounter, EliteEncounter, RestPlace, Shop, Treasure, Event, Boss }
+
+    // --- NOVÉ: Třída ActiveEnemy přesunuta sem pro real-time správu ---
+    public class ActiveEnemy
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = string.Empty;
+        public string TemplateName { get; set; } = string.Empty; 
+        public int Hp { get; set; }
+        public int MaxHp { get; set; }
+        public EnemyAction CurrentAction { get; set; } = new EnemyAction();
+
+        public Dictionary<string, int> Effects { get; set; } = new Dictionary<string, int>();
+
+        // --- 3D FYZIKA A REAL-TIME ---
+        public float X { get; set; } = 0f;
+        public float Y { get; set; } = 0f;
+        public float Z { get; set; } = 0f;
+        
+        // Za jak dlouho monstrum zaútočí (v milisekundách)
+        public float AttackCooldown { get; set; } = 3000f; // Standardně každé 3 vteřiny
+        public float CurrentCooldown { get; set; } = 3000f;
+        public float Speed { get; set; } = 2.0f; // Rychlost pohybu v Three.js
+
+        public void AddEffect(string type, int amount)
+        {
+            if (Effects.ContainsKey(type)) Effects[type] += amount;
+            else Effects[type] = amount;
+        }
+    }
 
     public class Node
     {
@@ -21,7 +51,6 @@ namespace RoguelikeCardGame.Models
         public string CardId { get; set; } = string.Empty;
         public int KarmaShift { get; set; }
         public int Damage { get; set; }
-        // NOVÉ: Cíl útoku
         public string TargetEnemyId { get; set; } = string.Empty; 
     }
 
@@ -30,12 +59,11 @@ namespace RoguelikeCardGame.Models
         public string RoomName { get; set; } = string.Empty;
         public List<Player> Players { get; set; } = new List<Player>();
         
+        // NOVÉ: Místnost nyní sama spravuje nepřátele pro real-time výpočty
+        public List<ActiveEnemy> ActiveEnemies { get; set; } = new List<ActiveEnemy>();
+        
         public int CurrentAct { get; set; } = 1; 
         public int CurrentKarma { get; set; } = 0; 
-        
-        public string EnemyName { get; set; } = "Neznámý nepřítel"; 
-        public int EnemyHp { get; set; } = 100;
-        public int EnemyMaxHp { get; set; } = 100; 
         
         public int TeamGold { get; set; } = 50; 
         public List<Relic> TeamRelics { get; set; } = new List<Relic>();
@@ -43,17 +71,92 @@ namespace RoguelikeCardGame.Models
         public List<Node> Map { get; set; } = new List<Node>();
         public int CurrentNodeId { get; set; } = -1; 
 
-        // NOVÉ: Paměť pro hlasování o další místnosti (Jméno hráče -> ID uzlu)
         public ConcurrentDictionary<string, int> MapVotes { get; set; } = new ConcurrentDictionary<string, int>();
-
         public ConcurrentDictionary<string, List<CardPlayData>> PlayedCardsThisTurn { get; set; } = new ConcurrentDictionary<string, List<CardPlayData>>();
         public List<string> PlayersReady { get; set; } = new List<string>();
+
+        // --- REAL-TIME SMYČKA ---
+        private Timer _battleTimer;
+        private int _tickRateMs = 100; // Server tiká 10x za sekundu
+        private int _manaTickAccumulator = 0;
+
+        // Události, na které se GameHub napojí, aby odeslal data klientům (Three.js)
+        public event Action<GameRoom> OnTickUpdate;
+        public event Action<GameRoom, ActiveEnemy> OnEnemyAttack;
 
         public GameRoom(string roomName)
         {
             RoomName = roomName;
             GenerateMap(); 
         }
+
+        // ==========================================
+        // REAL-TIME BATTLE LOGIKA
+        // ==========================================
+        
+        public void StartBattle()
+        {
+            if (_battleTimer != null) return;
+            
+            _battleTimer = new Timer(_tickRateMs);
+            _battleTimer.Elapsed += (sender, e) => BattleTick();
+            _battleTimer.Start();
+        }
+
+        public void StopBattle()
+        {
+            if (_battleTimer != null)
+            {
+                _battleTimer.Stop();
+                _battleTimer.Dispose();
+                _battleTimer = null;
+            }
+        }
+
+        private void BattleTick()
+        {
+            bool requireSync = false;
+
+            // 1. GENERACE MANY (Každou 1 sekundu)
+            _manaTickAccumulator += _tickRateMs;
+            if (_manaTickAccumulator >= 1000) 
+            {
+                _manaTickAccumulator = 0;
+                foreach(var p in Players)
+                {
+                    if (p.Mana < p.MaxMana) 
+                    { 
+                        p.Mana++; 
+                        requireSync = true; 
+                    }
+                }
+            }
+
+            // 2. AI NEPŘÁTEL A COOLDOWNY
+            foreach(var enemy in ActiveEnemies)
+            {
+                if (enemy.Hp <= 0) continue;
+
+                enemy.CurrentCooldown -= _tickRateMs;
+                if (enemy.CurrentCooldown <= 0)
+                {
+                    // Monstrum vystřelí útok!
+                    enemy.CurrentCooldown = enemy.AttackCooldown; 
+                    OnEnemyAttack?.Invoke(this, enemy); // Signalizuje GameHubu, ať to pošle do Three.js
+                }
+            }
+
+            // 3. BROADCAST (Odeslání nového stavu, pokud se něco důležitého změnilo)
+            // Lze posílat i plynulý pohyb, pokud jej vypočítává server.
+            if (requireSync)
+            {
+                OnTickUpdate?.Invoke(this);
+            }
+        }
+
+        // ==========================================
+        // GENEROVÁNÍ MAPY
+        // ==========================================
 
         public void GenerateMap()
         {
