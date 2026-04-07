@@ -1,10 +1,10 @@
 // ==========================================
-// 3D PROMĚNNÉ
+// 3D PROMĚNNÉ A ENGINE
 // ==========================================
 let scene, camera, renderer;
 let players3D = {}; 
 let enemies3D = {}; 
-let arenaObjects = []; // NOVÉ: Pole pro ukládání překážek a stěn arény
+let arenaObjects = []; // Zdi a překážky
 let is3DActive = false; 
 let myPosition = { x: 0, y: 0, z: 0 };
 
@@ -12,6 +12,29 @@ const keys = { w: false, a: false, s: false, d: false };
 const mouse = new THREE.Vector2(0, 0); 
 const raycaster = new THREE.Raycaster();
 let targetedEnemyId = null; 
+
+// --- POMOCNÁ FUNKCE: Vytvoření textové jmenovky ve 3D ---
+function createLabel(text, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.font = 'bold 28px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = color;
+    // Přidáme stín pro lepší čitelnost
+    ctx.shadowColor = "black";
+    ctx.shadowBlur = 5;
+    ctx.lineWidth = 4;
+    ctx.strokeText(text, 128, 64);
+    ctx.fillText(text, 128, 64);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    // depthTest: false zajistí, že jmenovku vždy uvidíš, i přes zeď nebo model
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(6, 3, 1);
+    return sprite;
+}
 
 function init3DScene() {
     if (is3DActive) return; 
@@ -28,12 +51,11 @@ function init3DScene() {
     }
     
     // Světla
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    directionalLight.position.set(10, 20, 10);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); // Zesíleno ambientní světlo, ať lépe vidíš
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(20, 30, 10);
     scene.add(directionalLight);
 
-    // Vykreslení náhodné arény
     generateArena();
 
     document.addEventListener("keydown", onKeyDown);
@@ -44,62 +66,66 @@ function init3DScene() {
         if(is3DActive) canvas.requestPointerLock();
     });
 
-    // Reset pozice při vstupu
     myPosition = { x: 0, y: 0, z: 0 };
     camera.position.set(0, 1.6, 0);
 
     animate3D();
 }
 
-// --- NOVÉ: GENERÁTOR ARÉNY ---
 function generateArena() {
     // 1. Úklid staré arény
     arenaObjects.forEach(obj => scene.remove(obj));
     arenaObjects = [];
 
-    // 2. Náhodná barva mlhy a oblohy pro atmosféru
-    const atmospheres = [0x1e272e, 0x2c3e50, 0x192a56, 0x2c2c54, 0x222f3e];
-    const bgColor = atmospheres[Math.floor(Math.random() * atmospheres.length)];
+    // 2. Prostředí (Mlha a obloha)
+    const bgColor = 0x1e272e;
     scene.background = new THREE.Color(bgColor);
-    scene.fog = new THREE.Fog(bgColor, 10, 60); // Mlha, která pohlcuje okraje arény
+    scene.fog = new THREE.Fog(bgColor, 10, 70); 
 
-    // 3. Temná pevná podlaha
+    // 3. Podlaha a Mřížka
     const floorGeo = new THREE.PlaneGeometry(100, 100);
     const floorMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
     
-    // Zachováme mřížku pro Cyber-Fantasy pocit (těsně nad podlahou)
-    const grid = new THREE.GridHelper(100, 100, 0x8e44ad, 0x34495e);
+    const grid = new THREE.GridHelper(90, 90, 0x8e44ad, 0x34495e);
     grid.position.y = 0.01; 
     scene.add(grid);
 
-    // 4. Náhodné překážky (Kameny, Sloupy)
-    const geoBox = new THREE.BoxGeometry(2, 6, 2);
-    const geoCyl = new THREE.CylinderGeometry(1.5, 1.5, 8, 8);
+    // 4. VIDITELNÉ OKRAJE ARÉNY (Svítící ohrádka na hranici +-45)
+    const wallMat = new THREE.MeshBasicMaterial({ color: 0x8e44ad, wireframe: true, transparent: true, opacity: 0.3 });
+    const wallGeo = new THREE.PlaneGeometry(90, 10);
+    
+    const wallN = new THREE.Mesh(wallGeo, wallMat); wallN.position.set(0, 5, -45); scene.add(wallN); arenaObjects.push(wallN);
+    const wallS = new THREE.Mesh(wallGeo, wallMat); wallS.position.set(0, 5, 45); wallS.rotation.y = Math.PI; scene.add(wallS); arenaObjects.push(wallS);
+    const wallE = new THREE.Mesh(wallGeo, wallMat); wallE.position.set(45, 5, 0); wallE.rotation.y = -Math.PI/2; scene.add(wallE); arenaObjects.push(wallE);
+    const wallW = new THREE.Mesh(wallGeo, wallMat); wallW.position.set(-45, 5, 0); wallW.rotation.y = Math.PI/2; scene.add(wallW); arenaObjects.push(wallW);
+
+    // 5. Náhodné překážky uvnitř arény
+    const geoBox = new THREE.BoxGeometry(2.5, 8, 2.5);
+    const geoCyl = new THREE.CylinderGeometry(1.5, 1.5, 10, 8);
     const matObs = new THREE.MeshLambertMaterial({ color: 0x555555 }); // Šedý kámen
 
-    const numObstacles = 12 + Math.floor(Math.random() * 15); // 12 až 27 překážek
+    const numObstacles = 15 + Math.floor(Math.random() * 10); 
     
     for(let i = 0; i < numObstacles; i++) {
         const isBox = Math.random() > 0.5;
         const mesh = new THREE.Mesh(isBox ? geoBox : geoCyl, matObs);
         
-        // Náhodná pozice
         let ox = (Math.random() - 0.5) * 80;
         let oz = (Math.random() - 0.5) * 80;
         
-        // Bezpečná zóna pro spawn hráčů uprostřed (nesmí tu být překážka)
-        if (Math.abs(ox) < 8 && Math.abs(oz) < 8) {
-            ox += 10 * Math.sign(ox || 1);
-            oz += 10 * Math.sign(oz || 1);
+        // Bezpečná zóna pro spawn hráčů
+        if (Math.abs(ox) < 10 && Math.abs(oz) < 10) {
+            ox += 12 * Math.sign(ox || 1);
+            oz += 12 * Math.sign(oz || 1);
         }
 
-        mesh.position.set(ox, isBox ? 3 : 4, oz);
+        mesh.position.set(ox, isBox ? 4 : 5, oz);
         mesh.rotation.y = Math.random() * Math.PI;
         
-        mesh.userData = { isObstacle: true }; // Značka pro kolize
+        mesh.userData = { isObstacle: true }; // Značka pro kolizi
         scene.add(mesh);
         arenaObjects.push(mesh);
     }
@@ -127,7 +153,6 @@ function onKeyUp(event) { if(keys.hasOwnProperty(event.key.toLowerCase())) keys[
 
 document.addEventListener("keydown", (event) => {
     if (!is3DActive) return;
-    
     let num = parseInt(event.key);
     const czechKeys = { '+': 1, 'ě': 2, 'š': 3, 'č': 4, 'ř': 5, 'ž': 6, 'ý': 7, 'á': 8, 'í': 9, 'é': 0 };
     if (czechKeys[event.key.toLowerCase()]) num = czechKeys[event.key.toLowerCase()];
@@ -139,18 +164,15 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-// --- NOVÉ: KOLIZNÍ SYSTÉM ---
 function checkCollision(nx, nz) {
-    // 1. Zastaví tě na okraji mapy (Zdi arény)
-    if (nx > 45 || nx < -45 || nz > 45 || nz < -45) return true;
+    if (nx > 44 || nx < -44 || nz > 44 || nz < -44) return true; // Narazil do zdi
     
-    // 2. Zastaví tě, pokud narazíš do sloupu/překážky
     for (let obj of arenaObjects) {
-        if (obj.userData.isObstacle) {
+        if (obj.userData && obj.userData.isObstacle) {
             let dx = nx - obj.position.x;
             let dz = nz - obj.position.z;
             let distance = Math.sqrt(dx * dx + dz * dz);
-            if (distance < 2.0) return true; // 2 metry hitbox sloupu
+            if (distance < 2.5) return true; // Narazil do překážky
         }
     }
     return false;
@@ -160,7 +182,6 @@ function animate3D() {
     if (!is3DActive) return;
     requestAnimationFrame(animate3D);
 
-    // POHYB A KOLIZE
     if (document.pointerLockElement === document.getElementById("game-canvas")) {
         const speed = 0.2;
         let moved = false;
@@ -180,7 +201,6 @@ function animate3D() {
         if (keys.d) { newX -= right.x * speed; newZ -= right.z * speed; moved = true; }
 
         if (moved) {
-            // Hráč se může pohnout jen tehdy, pokud na nové souřadnici NENÍ překážka
             if (!checkCollision(newX, newZ)) {
                 myPosition.x = newX;
                 myPosition.z = newZ;
@@ -193,19 +213,22 @@ function animate3D() {
         }
     }
 
-    // Zaměřování Raycasterem (Zahrnuje monstra, překážkám se vyhýbá ve výběru)
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children);
+    const intersects = raycaster.intersectObjects(scene.children, true); // True prohledává i vnořené objekty (jmenovky)
     
     targetedEnemyId = null;
     const targetInfoEl = document.getElementById("target-info");
     if(targetInfoEl) targetInfoEl.innerText = "";
     
     for (let i = 0; i < intersects.length; i++) {
-        const obj = intersects[i].object;
-        
-        // Zastavení zaměřovače, pokud se díváme do sloupu (překážka brání ve výhledu na monstrum)
-        if (obj.userData && obj.userData.isObstacle) break;
+        // Musíme najít hlavní objekt (mesh), i když paprsek trefí třeba jmenovku
+        let obj = intersects[i].object;
+        while (obj.parent && obj.parent.type !== "Scene") {
+            if (obj.userData.isEnemy || obj.userData.isObstacle) break;
+            obj = obj.parent;
+        }
+
+        if (obj.userData && obj.userData.isObstacle) break; // Přes kámen nezaměříš
 
         if (obj.userData && obj.userData.isEnemy && obj.userData.hp > 0) {
             targetedEnemyId = obj.userData.id;
@@ -220,6 +243,7 @@ function animate3D() {
 function update3DEntities(playersData, enemiesData) {
     if (!is3DActive) return;
 
+    // VYKRESLENÍ NEPŘÁTEL (Červené krystaly s plujícími jmény)
     enemiesData.forEach(eData => {
         let eHp = safeGet(eData, 'hp', 'Hp');
         let eId = safeGet(eData, 'id', 'Id');
@@ -231,9 +255,16 @@ function update3DEntities(playersData, enemiesData) {
         }
 
         if (!enemies3D[eId]) {
-            const geometry = new THREE.BoxGeometry(1.5, 2.5, 1.5);
+            // ZMĚNA TVARU: Místo Boxu použijeme Cone (Kužel/Krystal)
+            const geometry = new THREE.ConeGeometry(1.5, 3.5, 4);
             const material = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
             const mesh = new THREE.Mesh(geometry, material);
+            
+            // PŘIDÁNA JMENOVKA
+            const label = createLabel(`👹 ${eName}`, "#ff7675");
+            label.position.y = 3; // Posuneme ji nad krystal
+            mesh.add(label); // Přilepíme jmenovku na monstrum
+
             mesh.userData = { isEnemy: true, id: eId, name: eName }; 
             scene.add(mesh);
             enemies3D[eId] = mesh;
@@ -243,12 +274,13 @@ function update3DEntities(playersData, enemiesData) {
         mesh.userData.hp = eHp;
         mesh.position.x += (safeGet(eData, 'x', 'X') - mesh.position.x) * 0.1;
         mesh.position.z += (safeGet(eData, 'z', 'Z') - mesh.position.z) * 0.1;
-        mesh.position.y = 1.25; // Úprava výšky
+        mesh.position.y = 1.75; // Aby krystal stál na zemi
     });
 
+    // VYKRESLENÍ HRÁČŮ (Modré koule s plujícími jmény)
     playersData.forEach(pData => {
         let pName = safeGet(pData, 'name', 'Name');
-        if (pName === playerName) return; 
+        if (pName === playerName) return; // Sebe sama nekreslíme
         
         let pHp = safeGet(pData, 'hp', 'Hp');
         if (pHp <= 0) {
@@ -257,9 +289,15 @@ function update3DEntities(playersData, enemiesData) {
         }
 
         if (!players3D[pName]) {
-            const geometry = new THREE.SphereGeometry(0.8, 16, 16);
+            const geometry = new THREE.SphereGeometry(1, 16, 16);
             const material = new THREE.MeshLambertMaterial({ color: 0x3498db });
             const mesh = new THREE.Mesh(geometry, material);
+
+            // PŘIDÁNA JMENOVKA PRO SPOLUHRÁČE
+            const label = createLabel(`🛡️ ${pName}`, "#74b9ff");
+            label.position.y = 2.5; 
+            mesh.add(label);
+
             scene.add(mesh);
             players3D[pName] = mesh;
         }
