@@ -1,35 +1,40 @@
-// Pokud má tvůj GameHub jiný namespace (např. KarmaGame.Hubs), 
-// uprav tento using podle sebe, nebo ho smaž, pokud VS nenahlásí chybu.
-using Backend.Hubs; 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using RoguelikeCardGame.Hubs; 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. PŘIDÁNÍ SIGNALR (Pro herní komunikaci)
+// Přidáme SignalR pro real-time komunikaci
 builder.Services.AddSignalR();
 
-// 2. NASTAVENÍ CORS (Aby tě prohlížeče neblokovaly při lokálním testování)
+// NASTAVENÍ CORS
+// Povolíme připojení odkudkoliv (z tvého lokálu i z tvého frontendu na Renderu)
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyHeader()
+        policy.SetIsOriginAllowed(origin => true) 
+              .AllowAnyHeader()
               .AllowAnyMethod()
-              .SetIsOriginAllowed((host) => true) // Povolí připojení odkudkoliv
-              .AllowCredentials();
+              .AllowCredentials(); 
     });
 });
 
 var app = builder.Build();
 
-// 3. POUŽITÍ CORS
-app.UseCors("AllowAll");
+// Aktivujeme naše CORS pravidla
+app.UseCors();
 
-// 4. SERVÍROVÁNÍ FRONTENDU (Tohle pošle index.html ze složky wwwroot)
-app.UseDefaultFiles(); // Zajistí, že při zadání adresy webu se automaticky načte index.html
-app.UseStaticFiles();  // Povolí načítání CSS, JS a obrázků z wwwroot
+// --- NOVÉ (KISS PRINCIP) ---
+// 1. Nastaví index.html jako výchozí stránku, když někdo přijde na hlavní URL
+app.UseDefaultFiles(); 
 
-// 5. NAMAPOVÁNÍ HERNÍHO HUBU
+// 2. Tohle přesně OPRAVUJE tu červenou chybu v konzoli! 
+// Dovoluje serveru odesílat .css, .js a .html soubory se správným MIME typem.
+app.UseStaticFiles(); 
+// ---------------------------
+
+// Nasadíme náš komunikační Hub na tuto adresu
 app.MapHub<GameHub>("/gamehub");
 
-// 6. SPUŠTĚNÍ SERVERU
 app.Run();

@@ -2,9 +2,10 @@
 // SIGNALR PŘIPOJENÍ
 // ==========================================
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("/gamehub") // ZMĚNA: Relativní cesta
+    .withUrl("https://karma-the-shared-burden.onrender.com/gamehub") 
     .withAutomaticReconnect()
     .build();
+
 // --- LOGOVÁNÍ VÝPADKŮ PŘIPOJENÍ ---
 connection.onreconnecting(error => {
     console.warn("Spojení se serverem bylo přerušeno. Pokouším se znovu připojit...", error);
