@@ -2,13 +2,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Timers; // NOVÉ: Pro real-time smyčku
 
 namespace RoguelikeCardGame.Models
 {
     public enum NodeType { Encounter, EliteEncounter, RestPlace, Shop, Treasure, Event, Boss }
 
-    // --- NOVÉ: Třída ActiveEnemy přesunuta sem pro real-time správu ---
+    // --- Třída ActiveEnemy pro real-time správu ve 3D ---
     public class ActiveEnemy
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -59,7 +58,7 @@ namespace RoguelikeCardGame.Models
         public string RoomName { get; set; } = string.Empty;
         public List<Player> Players { get; set; } = new List<Player>();
         
-        // NOVÉ: Místnost nyní sama spravuje nepřátele pro real-time výpočty
+        // Místnost nyní sama spravuje nepřátele pro real-time výpočty
         public List<ActiveEnemy> ActiveEnemies { get; set; } = new List<ActiveEnemy>();
         
         public int CurrentAct { get; set; } = 1; 
@@ -76,13 +75,13 @@ namespace RoguelikeCardGame.Models
         public List<string> PlayersReady { get; set; } = new List<string>();
 
         // --- REAL-TIME SMYČKA ---
-        private System.Timers.Timer _battleTimer; // ZDE JE ZMĚNA
+        private System.Timers.Timer? _battleTimer; // Nullable varování opraveno přidáním '?'
         private int _tickRateMs = 100; // Server tiká 10x za sekundu
         private int _manaTickAccumulator = 0;
 
         // Události, na které se GameHub napojí, aby odeslal data klientům (Three.js)
-        public event Action<GameRoom> OnTickUpdate;
-        public event Action<GameRoom, ActiveEnemy> OnEnemyAttack;
+        public event Action<GameRoom>? OnTickUpdate;
+        public event Action<GameRoom, ActiveEnemy>? OnEnemyAttack;
 
         public GameRoom(string roomName)
         {
@@ -98,10 +97,11 @@ namespace RoguelikeCardGame.Models
         {
             if (_battleTimer != null) return;
             
-            _battleTimer = new System.Timers.Timer(_tickRateMs); // ZDE JE ZMĚNA
+            _battleTimer = new System.Timers.Timer(_tickRateMs);
             _battleTimer.Elapsed += (sender, e) => BattleTick();
             _battleTimer.Start();
         }
+
         public void StopBattle()
         {
             if (_battleTimer != null)
@@ -146,7 +146,6 @@ namespace RoguelikeCardGame.Models
             }
 
             // 3. BROADCAST (Odeslání nového stavu, pokud se něco důležitého změnilo)
-            // Lze posílat i plynulý pohyb, pokud jej vypočítává server.
             if (requireSync)
             {
                 OnTickUpdate?.Invoke(this);
@@ -154,9 +153,40 @@ namespace RoguelikeCardGame.Models
         }
 
         // ==========================================
-        // GENEROVÁNÍ MAPY
+        // 3D GENERACE ARÉNY A SPAWNOVÁNÍ
         // ==========================================
+        public void Initialize3DArena()
+        {
+            Random rng = new Random();
 
+            // 1. Nastavíme hráče blízko středu arény
+            float offset = 0f;
+            foreach (var player in Players)
+            {
+                player.X = offset;
+                player.Y = 0f;
+                player.Z = 0f;
+                offset += 2.0f; // Rozestup mezi hráči, pokud jich je víc
+            }
+
+            // 2. Rozmístíme nepřátele v kruhu kolem hráčů (10-20 jednotek daleko)
+            foreach (var enemy in ActiveEnemies)
+            {
+                double angle = rng.NextDouble() * Math.PI * 2;
+                double radius = rng.NextDouble() * 10 + 10;
+
+                enemy.X = (float)(Math.Cos(angle) * radius);
+                enemy.Z = (float)(Math.Sin(angle) * radius);
+                enemy.Y = 0f; 
+                
+                // Mírný rozptyl v prvním útoku, ať nezaútočí všichni najednou
+                enemy.CurrentCooldown = enemy.AttackCooldown + rng.Next(-500, 500);
+            }
+        }
+
+        // ==========================================
+        // GENEROVÁNÍ MAPY (Slay the Spire styl stromu)
+        // ==========================================
         public void GenerateMap()
         {
             Map = new List<Node>();

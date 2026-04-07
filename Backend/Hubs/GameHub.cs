@@ -274,7 +274,7 @@ namespace RoguelikeCardGame.Hubs
             await Clients.Group(room.RoomName).SendAsync("Update3DState", playerData, enemyData);
         }
 
-        // ZDE STŘÍLÍŠ KARTY V REÁLNÉM ČASE (Bývalý SelectCard)
+        // ZDE STŘÍLÍŠ KARTY V REÁLNÉM ČASE
         public async Task CastCard(string roomName, string playerName, string cardId, int karmaShift, string targetEnemyId)
         {
             if (_activeRooms.TryGetValue(roomName, out var room) && room != null)
@@ -282,7 +282,7 @@ namespace RoguelikeCardGame.Hubs
                 var player = room.Players.FirstOrDefault(p => p.Name == playerName);
                 if (player != null && player.Hp > 0 && player.Hand.Contains(cardId))
                 {
-                    CardTemplate fullCard = GetCardData(cardId);
+                    CardTemplate? fullCard = GetCardData(cardId); // Nyní správně používá ? (Nullable)
                     if (fullCard == null || player.Mana < fullCard.Cost) return; // Nemá manu
 
                     // Odečtení many, zahození karty
@@ -440,9 +440,9 @@ namespace RoguelikeCardGame.Hubs
         }
 
         // --------------------------------------------------------
-        // POMOCNÉ FUNKCE (Nezměněno, pouze přesunuto)
+        // POMOCNÉ FUNKCE 
         // --------------------------------------------------------
-        private CardTemplate GetCardData(string cardId)
+        private CardTemplate? GetCardData(string cardId)
         {
             if (cardId.EndsWith("+") && UpgradedCardsDatabase.UpgradedCards.TryGetValue(cardId, out var upgCard)) return upgCard;
             string baseCardId = cardId.EndsWith("+") ? cardId.Substring(0, cardId.Length - 1) : cardId;
@@ -455,11 +455,123 @@ namespace RoguelikeCardGame.Hubs
             switch (heroClass) { case "Paladin": return "P_"; case "Warlock": return "W_"; case "Monk": return "M_"; case "Berserker": return "B_"; case "Druid": return "D_"; case "Rogue": return "R_"; case "Bard": return "Bd_"; case "Pyromancer": return "Py_"; default: return "Z_"; }
         }
         
-        // Nechat pro klid duše metody pro Shop a Event (zůstaly stejné)
-        public async Task RestPlaceAction(string roomName, string playerName, string actionType, string cardId) { /* ... zkráceno pro přehlednost, doplň si z minula ... */ }
-        public async Task BuyShopItem(string roomName, string playerName, string itemId, string type, int price) { /* ... */ }
-        public async Task RemoveCardFromDeck(string roomName, string playerName, string cardId, int price) { /* ... */ }
-        public async Task ResolveEventOption(string roomName, string playerName, string eventId, int optionId) { /* ... */ }
-        public async Task ClaimReward(string roomName, string playerName, string cardId, string relicId, string relicName, string relicDesc) { /* ... */ }
+        // Zde jsou vloženy tvé původní metody beze změn:
+        public async Task RestPlaceAction(string roomName, string playerName, string actionType, string cardId)
+        {
+            if (_activeRooms.TryGetValue(roomName, out var room))
+            {
+                var p = room.Players.FirstOrDefault(x => x.Name == playerName);
+                if (p != null)
+                {
+                    if (actionType == "heal")
+                    {
+                        int healAmount = (int)(p.MaxHp * 0.3);
+                        healAmount = RelicManager.ApplyCampfireRelics(p, room, healAmount);
+                        p.Hp += healAmount;
+                        if (p.Hp > p.MaxHp) p.Hp = p.MaxHp;
+                    }
+                    else if (actionType == "upgrade" && !string.IsNullOrEmpty(cardId))
+                    {
+                        if (p.StartingDeck.Contains(cardId) && !cardId.EndsWith("+"))
+                        {
+                            p.StartingDeck.Remove(cardId);
+                            string upgradedCard = cardId + "+";
+                            p.StartingDeck.Add(upgradedCard);
+                            
+                            if(p.DrawPile.Contains(cardId)) { p.DrawPile.Remove(cardId); p.DrawPile.Add(upgradedCard); }
+                            if(p.DiscardPile.Contains(cardId)) { p.DiscardPile.Remove(cardId); p.DiscardPile.Add(upgradedCard); }
+                            if(p.Hand.Contains(cardId)) { p.Hand.Remove(cardId); p.Hand.Add(upgradedCard); }
+                        }
+                    }
+                    
+                    await Clients.Client(p.ConnectionId).SendAsync("RestActionCompleted", p.Hp, p.StartingDeck);
+                    await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                }
+            }
+        }
+
+        public async Task BuyShopItem(string roomName, string playerName, string itemId, string type, int price)
+        {
+            if (_activeRooms.TryGetValue(roomName, out var room))
+            {
+                var p = room.Players.FirstOrDefault(x => x.Name == playerName);
+                if (p != null && p.Gold >= price)
+                {
+                    p.Gold -= price;
+                    if (type == "Card")
+                    {
+                        p.StartingDeck.Add(itemId);
+                        p.DrawPile.Add(itemId);
+                    }
+                    else if (type == "Relic")
+                    {
+                        var r = RelicDatabase.LootRelics.FirstOrDefault(x => x.Id == itemId);
+                        if (r != null) {
+                            room.TeamRelics.Add(new Relic(itemId, $"{r.Name} ({p.Name})", r.Description));
+                            await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
+                        }
+                    }
+                    await Clients.Client(p.ConnectionId).SendAsync("ShopPurchaseSuccess", p.Gold, p.StartingDeck);
+                }
+            }
+        }
+
+        public async Task RemoveCardFromDeck(string roomName, string playerName, string cardId, int price)
+        {
+            if (_activeRooms.TryGetValue(roomName, out var room))
+            {
+                var p = room.Players.FirstOrDefault(x => x.Name == playerName);
+                if (p != null && p.Gold >= price && p.StartingDeck.Contains(cardId))
+                {
+                    p.Gold -= price;
+                    p.StartingDeck.Remove(cardId);
+                    p.DrawPile.Remove(cardId);
+                    p.DiscardPile.Remove(cardId);
+                    p.Hand.Remove(cardId);
+                    await Clients.Client(p.ConnectionId).SendAsync("ShopPurchaseSuccess", p.Gold, p.StartingDeck);
+                }
+            }
+        }
+
+        public async Task ResolveEventOption(string roomName, string playerName, string eventId, int optionId)
+        {
+            if (_activeRooms.TryGetValue(roomName, out var room))
+            {
+                var p = room.Players.FirstOrDefault(x => x.Name == playerName);
+                if (p != null)
+                {
+                    EventDatabase.ApplyEventEffect(eventId, optionId, p);
+                    await Clients.Client(p.ConnectionId).SendAsync("EventResolved", p.Gold, p.Hp, p.MaxHp);
+                    await Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                }
+            }
+        }
+
+        public async Task ClaimReward(string roomName, string playerName, string cardId, string relicId, string relicName, string relicDesc)
+        {
+            if (_activeRooms.TryGetValue(roomName, out var room))
+            {
+                var player = room.Players.FirstOrDefault(p => p.Name == playerName);
+                if (player != null)
+                {
+                    if (!string.IsNullOrEmpty(cardId))
+                    {
+                        player.StartingDeck.Add(cardId);
+                        player.DrawPile.Add(cardId); 
+                    }
+
+                    if (!string.IsNullOrEmpty(relicId))
+                    {
+                        if (!room.TeamRelics.Any(r => r.Id == relicId)) 
+                        {
+                            room.TeamRelics.Add(new Relic(relicId, $"{relicName} ({player.Name})", relicDesc));
+                            await Clients.Group(roomName).SendAsync("UpdateRelics", room.TeamRelics.ToList());
+                        }
+                    }
+
+                    await Clients.Client(player.ConnectionId).SendAsync("RewardClaimed", player.StartingDeck);
+                }
+            }
+        }
     }
 }
