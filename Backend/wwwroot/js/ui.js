@@ -72,6 +72,26 @@ function renderHand() {
     });
 }
 
+// --- PŘIDÁNO: Vykreslování relikvií ---
+function updateRelicsUI(relicsList) {
+    const relicsContainer = document.getElementById("relics-list"); 
+    if (!relicsContainer) return;
+    relicsContainer.innerHTML = ""; 
+    if (!relicsList || relicsList.length === 0) { 
+        relicsContainer.innerText = "Zatím žádné"; 
+        return; 
+    }
+    relicsList.forEach(r => {
+        const span = document.createElement("span"); 
+        span.innerText = `[${safeGet(r, 'name', 'Name')}] `;
+        span.title = safeGet(r, 'description', 'Description'); 
+        span.style.cursor = "help"; 
+        span.style.borderBottom = "2px dotted #2c3e50"; 
+        span.style.marginRight = "10px";
+        relicsContainer.appendChild(span);
+    });
+}
+
 // ==========================================
 // MODÁLNÍ OKNA (Balíček, Vylepšování)
 // ==========================================
@@ -298,7 +318,8 @@ function renderMap() {
         mapContainer.appendChild(row);
     }
     
-    setTimeout(() => drawMapLines(), 100);
+    // OPRAVA: Zpoždění 500ms kvůli CSS animaci zmenšení/zvětšení okna
+    setTimeout(() => drawMapLines(), 500);
 }
 
 function drawMapLines() {

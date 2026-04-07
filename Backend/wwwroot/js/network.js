@@ -87,6 +87,11 @@ connection.on("GameStarted", (roomName, initialMap) => {
     renderMap();
 });
 
+// --- PŘIDÁNO ZPĚT: RELIKVIE ---
+connection.on("UpdateRelics", (relicsList) => { 
+    updateRelicsUI(relicsList); 
+});
+
 connection.on("UpdateTeamStats", (teamData) => { currentTeamData = teamData; });
 connection.on("UpdateMapVotes", (votes) => { currentMapVotes = votes; renderMap(); });
 
