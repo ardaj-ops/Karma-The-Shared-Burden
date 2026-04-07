@@ -76,7 +76,7 @@ namespace RoguelikeCardGame.Models
         public List<string> PlayersReady { get; set; } = new List<string>();
 
         // --- REAL-TIME SMYČKA ---
-        private Timer _battleTimer;
+        private System.Timers.Timer _battleTimer; // ZDE JE ZMĚNA
         private int _tickRateMs = 100; // Server tiká 10x za sekundu
         private int _manaTickAccumulator = 0;
 
@@ -98,11 +98,10 @@ namespace RoguelikeCardGame.Models
         {
             if (_battleTimer != null) return;
             
-            _battleTimer = new Timer(_tickRateMs);
+            _battleTimer = new System.Timers.Timer(_tickRateMs); // ZDE JE ZMĚNA
             _battleTimer.Elapsed += (sender, e) => BattleTick();
             _battleTimer.Start();
         }
-
         public void StopBattle()
         {
             if (_battleTimer != null)
