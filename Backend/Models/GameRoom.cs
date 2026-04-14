@@ -75,7 +75,7 @@ namespace RoguelikeCardGame.Models
         public List<string> PlayersReady { get; set; } = new List<string>();
 
         // --- REAL-TIME SMYČKA ---
-        private System.Timers.Timer? _battleTimer; // Nullable varování opraveno přidáním '?'
+        private System.Timers.Timer? _battleTimer; 
         private int _tickRateMs = 100; // Server tiká 10x za sekundu
         private int _manaTickAccumulator = 0;
 
@@ -136,16 +136,24 @@ namespace RoguelikeCardGame.Models
             {
                 if (enemy.Hp <= 0) continue;
 
+                // Neustále odpočítáváme čas do další akce monstra
                 enemy.CurrentCooldown -= _tickRateMs;
+                
+                // Připravíme data pro případný pohyb, ten spustí Broadcast, i když neútočí
+                requireSync = true; 
+
                 if (enemy.CurrentCooldown <= 0)
                 {
-                    // Monstrum vystřelí útok!
-                    enemy.CurrentCooldown = enemy.AttackCooldown; 
-                    OnEnemyAttack?.Invoke(this, enemy); // Signalizuje GameHubu, ať to pošle do Three.js
+                    // Monstrum zaútočí (nebo se pokusí pohnout k hráči podle logiky v GameHubu)
+                    OnEnemyAttack?.Invoke(this, enemy); 
+                    
+                    // Reset časovače na základě šablony daného monstra + drobná odchylka pro nepředvídatelnost
+                    Random rng = new Random();
+                    enemy.CurrentCooldown = enemy.AttackCooldown + rng.Next(-300, 300);
                 }
             }
 
-            // 3. BROADCAST (Odeslání nového stavu, pokud se něco důležitého změnilo)
+            // 3. BROADCAST (Odeslání nového stavu, protože se monstra hýbou)
             if (requireSync)
             {
                 OnTickUpdate?.Invoke(this);
@@ -169,18 +177,18 @@ namespace RoguelikeCardGame.Models
                 offset += 2.0f; // Rozestup mezi hráči, pokud jich je víc
             }
 
-            // 2. Rozmístíme nepřátele v kruhu kolem hráčů (10-20 jednotek daleko)
+            // 2. Rozmístíme nepřátele v kruhu kolem hráčů (10-25 jednotek daleko)
             foreach (var enemy in ActiveEnemies)
             {
                 double angle = rng.NextDouble() * Math.PI * 2;
-                double radius = rng.NextDouble() * 10 + 10;
+                double radius = rng.NextDouble() * 15 + 10; // Spawnování 10 až 25 metrů od středu
 
                 enemy.X = (float)(Math.Cos(angle) * radius);
                 enemy.Z = (float)(Math.Sin(angle) * radius);
                 enemy.Y = 0f; 
                 
                 // Mírný rozptyl v prvním útoku, ať nezaútočí všichni najednou
-                enemy.CurrentCooldown = enemy.AttackCooldown + rng.Next(-500, 500);
+                enemy.CurrentCooldown = enemy.AttackCooldown + rng.Next(-500, 1500);
             }
         }
 
