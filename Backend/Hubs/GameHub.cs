@@ -15,7 +15,6 @@ namespace RoguelikeCardGame.Hubs
         // --------------------------------------------------------
         private static ConcurrentDictionary<string, GameRoom> _activeRooms = new ConcurrentDictionary<string, GameRoom>();
         
-        // ZDE JE TA MAGIE: Permanentní vysílačka pro background thready
         private readonly IHubContext<GameHub> _hubContext;
 
         public GameHub(IHubContext<GameHub> hubContext)
@@ -23,7 +22,6 @@ namespace RoguelikeCardGame.Hubs
             _hubContext = hubContext;
         }
 
-        // Tuto metodu uděláme statickou, aby nevyžadovala instanci Hubu
         private static object GetTeamStats(GameRoom room)
         {
             return room.Players.Select(p => new { name = p.Name, hp = p.Hp, maxHp = p.MaxHp, block = p.Block, heroClass = p.HeroClass }).ToList();
@@ -63,7 +61,6 @@ namespace RoguelikeCardGame.Hubs
             
             var newRoom = new GameRoom(roomName);
             
-            // Zachytíme permanentní vysílačku pro použití v background timeru
             var capturedContext = _hubContext;
             newRoom.OnTickUpdate += async (room) => await Broadcast3DState(room, capturedContext);
             newRoom.OnEnemyAttack += async (room, enemy) => await HandleEnemyRealTimeAttack(room, enemy, capturedContext);
@@ -161,7 +158,6 @@ namespace RoguelikeCardGame.Hubs
 
                 room.CurrentNodeId = nodeId;
                 
-                // Vyčištění před bojem
                 foreach (var p in room.Players)
                 {
                     p.Mana = p.MaxMana;
@@ -173,7 +169,6 @@ namespace RoguelikeCardGame.Hubs
                     p.CardsPlayedThisTurn = 0;
                 }
 
-                // BOJ
                 if (targetNode.Type == NodeType.Encounter || targetNode.Type == NodeType.EliteEncounter || targetNode.Type == NodeType.Boss)
                 {
                     Random rng = new Random();
@@ -270,16 +265,29 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // Předáváme hubContext pro bezpečné odeslání z backgroundu
-        // Předáváme hubContext pro bezpečné odeslání z backgroundu
         private static async Task Broadcast3DState(GameRoom room, IHubContext<GameHub> hubContext)
         {
             var playerData = room.Players.Select(p => new { name = p.Name, x = p.X, y = p.Y, z = p.Z, hp = p.Hp, mana = p.Mana }).ToList();
-            
-            // OPRAVA: Přidáno 'name = e.Name', aby 3D engine nepsal "undefined"
             var enemyData = room.ActiveEnemies.Where(e => e.Hp > 0).Select(e => new { id = e.Id, name = e.Name, x = e.X, y = e.Y, z = e.Z, hp = e.Hp }).ToList();
-            
             await hubContext.Clients.Group(room.RoomName).SendAsync("Update3DState", playerData, enemyData);
+        }
+
+        // NOVÉ: Kliknutí pro doplnění many
+        public async Task RechargeManaClick(string roomName, string playerName)
+        {
+            if (_activeRooms.TryGetValue(roomName, out var room))
+            {
+                var player = room.Players.FirstOrDefault(p => p.Name == playerName);
+                if (player != null && player.Hp > 0)
+                {
+                    if (player.Mana < player.MaxMana)
+                    {
+                        player.Mana++;
+                        // Nyní musíme použít _hubContext, protože tohle může běžet rychle a nezávisle
+                        await _hubContext.Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                    }
+                }
+            }
         }
 
         public async Task CastCard(string roomName, string playerName, string cardId, int karmaShift, string targetEnemyId, string targetPlayerName)
@@ -424,16 +432,11 @@ namespace RoguelikeCardGame.Hubs
             }
         }
 
-        // --------------------------------------------------------
-        // OPRAVENÁ AI NEPŘÁTEL (LOVCI)
-        // Předáváme hubContext, takže už nám server nespadne!
-        // --------------------------------------------------------
         private static async Task HandleEnemyRealTimeAttack(GameRoom room, ActiveEnemy enemy, IHubContext<GameHub> hubContext)
         {
             var alivePlayers = room.Players.Where(p => p.Hp > 0).ToList();
             if (alivePlayers.Count == 0) return;
 
-            // 1. Najít NEJBLIŽŠÍHO hráče místo náhodného
             Player targetPlayer = null;
             float minDistance = float.MaxValue;
 
@@ -455,7 +458,6 @@ namespace RoguelikeCardGame.Hubs
 
             if (minDistance > range)
             {
-                // 2. POHYB: Monstrum jde k hráči
                 float dirX = targetPlayer.X - enemy.X;
                 float dirZ = targetPlayer.Z - enemy.Z;
                 
@@ -471,7 +473,6 @@ namespace RoguelikeCardGame.Hubs
             }
             else
             {
-                // 3. ÚTOK
                 var action = enemy.CurrentAction;
                 if (action.DamageToAll > 0) 
                 {
@@ -659,23 +660,6 @@ namespace RoguelikeCardGame.Hubs
 
                     await Clients.Client(player.ConnectionId).SendAsync("RewardClaimed", player.StartingDeck);
                 }
-            }
-        }
-    }
-}
-public async Task RechargeManaClick(string roomName, string playerName)
-{
-    if (_activeRooms.TryGetValue(roomName, out var room))
-    {
-        var player = room.Players.FirstOrDefault(p => p.Name == playerName);
-        if (player != null && player.Hp > 0)
-        {
-            // Přidáme 1 manu, ale nepřekročíme maximum
-            if (player.Mana < player.MaxMana)
-            {
-                player.Mana++;
-                // Okamžitě odešleme aktualizaci všem, aby se pohnul bar v UI
-                await _hubContext.Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
             }
         }
     }
