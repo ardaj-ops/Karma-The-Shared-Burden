@@ -15,7 +15,6 @@ namespace RoguelikeCardGame.Hubs
         // --------------------------------------------------------
         private static ConcurrentDictionary<string, GameRoom> _activeRooms = new ConcurrentDictionary<string, GameRoom>();
         
-        // ZDE JE TA MAGIE: Permanentní vysílačka pro background thready
         private readonly IHubContext<GameHub> _hubContext;
 
         public GameHub(IHubContext<GameHub> hubContext)
@@ -23,7 +22,6 @@ namespace RoguelikeCardGame.Hubs
             _hubContext = hubContext;
         }
 
-        // Tuto metodu uděláme statickou, aby nevyžadovala instanci Hubu
         private static object GetTeamStats(GameRoom room)
         {
             return room.Players.Select(p => new { name = p.Name, hp = p.Hp, maxHp = p.MaxHp, block = p.Block, heroClass = p.HeroClass }).ToList();
@@ -63,10 +61,16 @@ namespace RoguelikeCardGame.Hubs
             
             var newRoom = new GameRoom(roomName);
             
-            // Zachytíme permanentní vysílačku pro použití v background timeru
             var capturedContext = _hubContext;
             newRoom.OnTickUpdate += async (room) => await Broadcast3DState(room, capturedContext);
             newRoom.OnEnemyAttack += async (room, enemy) => await HandleEnemyRealTimeAttack(room, enemy, capturedContext);
+            
+            // OPRAVA: Napojení na aktualizace UI pro hráče (dobírání karet a regenerace many)
+            newRoom.OnPlayerUIUpdate += async (room, p) => 
+            {
+                await capturedContext.Clients.Client(p.ConnectionId).SendAsync("ReceiveNewTurnState", 
+                    p.Hand, p.Mana, p.Gold, p.DrawPile, p.DiscardPile, p.Hp, p.MaxHp, p.Block, room.ActiveEnemies);
+            };
             
             _activeRooms.TryAdd(roomName, newRoom);
             await JoinLobby(roomName, playerName, heroClass);
@@ -161,7 +165,6 @@ namespace RoguelikeCardGame.Hubs
 
                 room.CurrentNodeId = nodeId;
                 
-                // Vyčištění před bojem
                 foreach (var p in room.Players)
                 {
                     p.Mana = p.MaxMana;
@@ -173,7 +176,6 @@ namespace RoguelikeCardGame.Hubs
                     p.CardsPlayedThisTurn = 0;
                 }
 
-                // BOJ
                 if (targetNode.Type == NodeType.Encounter || targetNode.Type == NodeType.EliteEncounter || targetNode.Type == NodeType.Boss)
                 {
                     Random rng = new Random();
@@ -273,13 +275,12 @@ namespace RoguelikeCardGame.Hubs
         private static async Task Broadcast3DState(GameRoom room, IHubContext<GameHub> hubContext)
         {
             var playerData = room.Players.Select(p => new { name = p.Name, x = p.X, y = p.Y, z = p.Z, hp = p.Hp, mana = p.Mana }).ToList();
-            
             var enemyData = room.ActiveEnemies.Where(e => e.Hp > 0).Select(e => new { id = e.Id, name = e.Name, x = e.X, y = e.Y, z = e.Z, hp = e.Hp }).ToList();
-            
             await hubContext.Clients.Group(room.RoomName).SendAsync("Update3DState", playerData, enemyData);
         }
 
-        // NOVÉ: Kliknutí pro doplnění many (SPRÁVNĚ UMÍSTĚNO)
+        // OPRAVA: Metoda pro doplnění many nyní pošle zprávu "ReceiveNewTurnState"
+        // přímo tomu hráči, který klikl, aby si jeho prohlížeč přepsal UI manu a karty.
         public async Task RechargeManaClick(string roomName, string playerName)
         {
             if (_activeRooms.TryGetValue(roomName, out var room))
@@ -290,7 +291,9 @@ namespace RoguelikeCardGame.Hubs
                     if (player.Mana < player.MaxMana)
                     {
                         player.Mana++;
-                        await _hubContext.Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+                        
+                        await _hubContext.Clients.Client(player.ConnectionId).SendAsync("ReceiveNewTurnState", 
+                            player.Hand, player.Mana, player.Gold, player.DrawPile, player.DiscardPile, player.Hp, player.MaxHp, player.Block, room.ActiveEnemies);
                     }
                 }
             }

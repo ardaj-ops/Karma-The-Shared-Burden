@@ -25,9 +25,9 @@ namespace RoguelikeCardGame.Models
         public float Z { get; set; } = 0f;
         
         // Za jak dlouho monstrum zaútočí (v milisekundách)
-        public float AttackCooldown { get; set; } = 3000f; // Standardně každé 3 vteřiny
+        public float AttackCooldown { get; set; } = 3000f; 
         public float CurrentCooldown { get; set; } = 3000f;
-        public float Speed { get; set; } = 2.0f; // Rychlost pohybu v Three.js
+        public float Speed { get; set; } = 2.0f; 
 
         public void AddEffect(string type, int amount)
         {
@@ -58,7 +58,6 @@ namespace RoguelikeCardGame.Models
         public string RoomName { get; set; } = string.Empty;
         public List<Player> Players { get; set; } = new List<Player>();
         
-        // Místnost nyní sama spravuje nepřátele pro real-time výpočty
         public List<ActiveEnemy> ActiveEnemies { get; set; } = new List<ActiveEnemy>();
         
         public int CurrentAct { get; set; } = 1; 
@@ -79,9 +78,10 @@ namespace RoguelikeCardGame.Models
         private int _tickRateMs = 100; // Server tiká 10x za sekundu
         private int _manaTickAccumulator = 0;
 
-        // Události, na které se GameHub napojí, aby odeslal data klientům (Three.js)
+        // Události, na které se GameHub napojí
         public event Action<GameRoom>? OnTickUpdate;
         public event Action<GameRoom, ActiveEnemy>? OnEnemyAttack;
+        public event Action<GameRoom, Player>? OnPlayerUIUpdate; // OPRAVA: Event pro aktualizaci karet a many v UI
 
         public GameRoom(string roomName)
         {
@@ -89,10 +89,6 @@ namespace RoguelikeCardGame.Models
             GenerateMap(); 
         }
 
-        // ==========================================
-        // REAL-TIME BATTLE LOGIKA
-        // ==========================================
-        
         public void StartBattle()
         {
             if (_battleTimer != null) return;
@@ -123,24 +119,26 @@ namespace RoguelikeCardGame.Models
                 _manaTickAccumulator = 0;
                 foreach(var p in Players)
                 {
-                    bool changed = false;
+                    bool uiChanged = false;
                     
-                    // Přidání many
                     if (p.Mana < p.MaxMana) 
                     { 
                         p.Mana++; 
-                        changed = true; 
+                        uiChanged = true; 
                     }
                     
-                    // NOVÉ: Automatické dobírání karet v reálném čase!
-                    // Pokud máš v ruce méně než 5 karet, každou vteřinu si lízneš jednu novou
+                    // OPRAVA: Automaticky dobíráme karty do počtu 5!
                     if (p.Hand.Count < 5) 
                     {
                         p.DrawCards(1);
-                        changed = true;
+                        uiChanged = true;
                     }
-
-                    if (changed) requireSync = true; 
+                    
+                    // Pokud se změnila mana nebo karty, řekneme GameHubu, ať hráči updatuje UI
+                    if (uiChanged)
+                    {
+                        OnPlayerUIUpdate?.Invoke(this, p);
+                    }
                 }
             }
 
@@ -149,65 +147,50 @@ namespace RoguelikeCardGame.Models
             {
                 if (enemy.Hp <= 0) continue;
 
-                // Neustále odpočítáváme čas do další akce monstra
                 enemy.CurrentCooldown -= _tickRateMs;
-                
-                // Připravíme data pro případný pohyb, ten spustí Broadcast, i když neútočí
                 requireSync = true; 
 
                 if (enemy.CurrentCooldown <= 0)
                 {
-                    // Monstrum zaútočí (nebo se pokusí pohnout k hráči podle logiky v GameHubu)
                     OnEnemyAttack?.Invoke(this, enemy); 
-                    
-                    // Reset časovače na základě šablony daného monstra + drobná odchylka pro nepředvídatelnost
                     Random rng = new Random();
                     enemy.CurrentCooldown = enemy.AttackCooldown + rng.Next(-300, 300);
                 }
             }
 
-            // 3. BROADCAST (Odeslání nového stavu, protože se monstra hýbou)
+            // 3. BROADCAST (Odeslání nového stavu 3D pozic)
             if (requireSync)
             {
                 OnTickUpdate?.Invoke(this);
             }
         }
 
-        // ==========================================
-        // 3D GENERACE ARÉNY A SPAWNOVÁNÍ
-        // ==========================================
         public void Initialize3DArena()
         {
             Random rng = new Random();
 
-            // 1. Nastavíme hráče blízko středu arény
             float offset = 0f;
             foreach (var player in Players)
             {
                 player.X = offset;
                 player.Y = 0f;
                 player.Z = 0f;
-                offset += 2.0f; // Rozestup mezi hráči, pokud jich je víc
+                offset += 2.0f; 
             }
 
-            // 2. Rozmístíme nepřátele v kruhu kolem hráčů (10-25 jednotek daleko)
             foreach (var enemy in ActiveEnemies)
             {
                 double angle = rng.NextDouble() * Math.PI * 2;
-                double radius = rng.NextDouble() * 15 + 10; // Spawnování 10 až 25 metrů od středu
+                double radius = rng.NextDouble() * 15 + 10; 
 
                 enemy.X = (float)(Math.Cos(angle) * radius);
                 enemy.Z = (float)(Math.Sin(angle) * radius);
                 enemy.Y = 0f; 
                 
-                // Mírný rozptyl v prvním útoku, ať nezaútočí všichni najednou
                 enemy.CurrentCooldown = enemy.AttackCooldown + rng.Next(-500, 1500);
             }
         }
 
-        // ==========================================
-        // GENEROVÁNÍ MAPY (Slay the Spire styl stromu)
-        // ==========================================
         public void GenerateMap()
         {
             Map = new List<Node>();
