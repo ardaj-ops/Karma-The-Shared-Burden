@@ -58,23 +58,24 @@ function updateStatsUI() {
 
 function renderHand() {
     const handContainer = document.getElementById("hand-container"); if (!handContainer) return; handContainer.innerHTML = ""; 
-    myHand.forEach(cardId => {
+    myHand.forEach((cardId, index) => {
         const cData = getCardData(cardId); 
         const cardElement = document.createElement("div"); 
         cardElement.className = "card interactive-ui"; 
         
-        let bgColor = "#34495e"; // Neutrální modro-šedá
-        if(cData.karmaShift < 0) bgColor = "#c0392b"; // Temná červená
-        if(cData.karmaShift > 0) bgColor = "#27ae60"; // Světlá zelená
+        let bgColor = "#34495e"; 
+        if(cData.karmaShift < 0) bgColor = "#c0392b"; 
+        if(cData.karmaShift > 0) bgColor = "#27ae60"; 
         
+        // Přidali jsme zobrazení klávesové zkratky přímo na kartu!
         cardElement.innerHTML = `
+            <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 3px; font-size: 10px; color: #f1c40f;">${index + 1}</div>
             <div class="card-cost">${cData.cost}</div>
             <div class="card-title">${cData.name}</div>
             <div class="card-desc">${cData.description}</div>
         `;
         
         cardElement.onclick = () => { playCard(cardId, cData.karmaShift, cData.damage); };
-        
         cardElement.style.background = `linear-gradient(135deg, ${bgColor}, #2c3e50)`;
         cardElement.style.color = "white";
         
@@ -181,7 +182,7 @@ function renderShopUI(shopCards, shopRelics, removeCost) {
         let id = safeGet(c, 'id', 'Id'); let name = safeGet(c, 'name', 'Name'); let desc = safeGet(c, 'desc', 'Desc'); let price = safeGet(c, 'price', 'Price');
         
         btn.className = "card interactive-ui";
-        btn.style.background = "linear-gradient(135deg, #f39c12, #d35400)"; // Zlatý obchodní gradient
+        btn.style.background = "linear-gradient(135deg, #f39c12, #d35400)"; 
         btn.style.color = "white";
         btn.innerHTML = `
             <div class="card-title" style="margin-top:10px;">${name}</div>
@@ -369,7 +370,6 @@ function renderMap() {
         mapContainer.appendChild(row);
     }
     
-    // OPRAVA: Zpoždění 500ms kvůli CSS animaci zmenšení/zvětšení okna
     setTimeout(() => drawMapLines(), 500);
 }
 
