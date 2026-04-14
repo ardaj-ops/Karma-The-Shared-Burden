@@ -243,27 +243,33 @@ function animate3D() {
 function update3DEntities(playersData, enemiesData) {
     if (!is3DActive) return;
 
-    // VYKRESLENÍ NEPŘÁTEL (Červené krystaly s plujícími jmény)
+    // --- OPRAVA: Úklid mrtvých monster ---
+    // Získáme pole IDček všech monster, která nám server právě poslal (server posílá jen živé)
+    const incomingEnemyIds = enemiesData.map(e => safeGet(e, 'id', 'Id'));
+    
+    // Projdeme všechny naše lokální 3D modely
+    for (let id in enemies3D) {
+        // Pokud máme ve scéně monstrum, které už nám server neposílá, znamená to, že zemřelo
+        if (!incomingEnemyIds.includes(id)) {
+            scene.remove(enemies3D[id]); // Smažeme model i s jmenovkou z 3D scény
+            delete enemies3D[id];        // Vymažeme ho z paměti
+        }
+    }
+
+    // VYKRESLENÍ A POHYB ŽIVÝCH NEPŘÁTEL
     enemiesData.forEach(eData => {
         let eHp = safeGet(eData, 'hp', 'Hp');
         let eId = safeGet(eData, 'id', 'Id');
         let eName = safeGet(eData, 'name', 'Name');
-        
-        if (eHp <= 0) {
-            if (enemies3D[eId]) { scene.remove(enemies3D[eId]); delete enemies3D[eId]; }
-            return;
-        }
 
         if (!enemies3D[eId]) {
-            // ZMĚNA TVARU: Místo Boxu použijeme Cone (Kužel/Krystal)
             const geometry = new THREE.ConeGeometry(1.5, 3.5, 4);
             const material = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
             const mesh = new THREE.Mesh(geometry, material);
             
-            // PŘIDÁNA JMENOVKA
             const label = createLabel(`👹 ${eName}`, "#ff7675");
-            label.position.y = 3; // Posuneme ji nad krystal
-            mesh.add(label); // Přilepíme jmenovku na monstrum
+            label.position.y = 3; 
+            mesh.add(label); 
 
             mesh.userData = { isEnemy: true, id: eId, name: eName }; 
             scene.add(mesh);
@@ -274,13 +280,13 @@ function update3DEntities(playersData, enemiesData) {
         mesh.userData.hp = eHp;
         mesh.position.x += (safeGet(eData, 'x', 'X') - mesh.position.x) * 0.1;
         mesh.position.z += (safeGet(eData, 'z', 'Z') - mesh.position.z) * 0.1;
-        mesh.position.y = 1.75; // Aby krystal stál na zemi
+        mesh.position.y = 1.75; 
     });
 
-    // VYKRESLENÍ HRÁČŮ (Modré koule s plujícími jmény)
+    // VYKRESLENÍ HRÁČŮ
     playersData.forEach(pData => {
         let pName = safeGet(pData, 'name', 'Name');
-        if (pName === playerName) return; // Sebe sama nekreslíme
+        if (pName === playerName) return; 
         
         let pHp = safeGet(pData, 'hp', 'Hp');
         if (pHp <= 0) {
@@ -293,7 +299,6 @@ function update3DEntities(playersData, enemiesData) {
             const material = new THREE.MeshLambertMaterial({ color: 0x3498db });
             const mesh = new THREE.Mesh(geometry, material);
 
-            // PŘIDÁNA JMENOVKA PRO SPOLUHRÁČE
             const label = createLabel(`🛡️ ${pName}`, "#74b9ff");
             label.position.y = 2.5; 
             mesh.add(label);
