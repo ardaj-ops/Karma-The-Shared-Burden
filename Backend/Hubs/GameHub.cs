@@ -663,3 +663,20 @@ namespace RoguelikeCardGame.Hubs
         }
     }
 }
+public async Task RechargeManaClick(string roomName, string playerName)
+{
+    if (_activeRooms.TryGetValue(roomName, out var room))
+    {
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName);
+        if (player != null && player.Hp > 0)
+        {
+            // Přidáme 1 manu, ale nepřekročíme maximum
+            if (player.Mana < player.MaxMana)
+            {
+                player.Mana++;
+                // Okamžitě odešleme aktualizaci všem, aby se pohnul bar v UI
+                await _hubContext.Clients.Group(roomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
+            }
+        }
+    }
+}

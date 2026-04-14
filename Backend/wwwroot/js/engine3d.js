@@ -62,8 +62,28 @@ function init3DScene() {
     document.addEventListener("keyup", onKeyUp);
     document.addEventListener("mousemove", onMouseMove);
 
-    canvas.addEventListener("click", () => {
-        if(is3DActive) canvas.requestPointerLock();
+    // --- KLIKÁNÍ PRO ZAMKNUTÍ MYŠI A DOBÍJENÍ MANY ---
+    canvas.addEventListener("mousedown", (event) => {
+        // Pokud hra ještě není uzamčena, kliknutí ji zamkne
+        if(is3DActive && document.pointerLockElement !== canvas) {
+            canvas.requestPointerLock();
+            return;
+        }
+
+        // Pokud je už zamčena a klikli jsme Levým Tlačítkem (0)
+        if (is3DActive && event.button === 0 && document.pointerLockElement === canvas) {
+            // Zavoláme server, aby nám přidal manu
+            if (typeof connection !== 'undefined') {
+                connection.invoke("RechargeManaClick", currentRoomName, playerName).catch(err => console.error(err));
+            }
+            
+            // Vizuální feedback v UI - číslo many lehce poskočí
+            const manaEl = document.getElementById("mana-value");
+            if (manaEl) {
+                manaEl.style.transform = "scale(1.5)";
+                setTimeout(() => manaEl.style.transform = "scale(1)", 150);
+            }
+        }
     });
 
     myPosition = { x: 0, y: 0, z: 0 };
@@ -214,21 +234,20 @@ function animate3D() {
     }
 
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children, true); // True prohledává i vnořené objekty (jmenovky)
+    const intersects = raycaster.intersectObjects(scene.children, true); 
     
     targetedEnemyId = null;
     const targetInfoEl = document.getElementById("target-info");
     if(targetInfoEl) targetInfoEl.innerText = "";
     
     for (let i = 0; i < intersects.length; i++) {
-        // Musíme najít hlavní objekt (mesh), i když paprsek trefí třeba jmenovku
         let obj = intersects[i].object;
         while (obj.parent && obj.parent.type !== "Scene") {
             if (obj.userData.isEnemy || obj.userData.isObstacle) break;
             obj = obj.parent;
         }
 
-        if (obj.userData && obj.userData.isObstacle) break; // Přes kámen nezaměříš
+        if (obj.userData && obj.userData.isObstacle) break; 
 
         if (obj.userData && obj.userData.isEnemy && obj.userData.hp > 0) {
             targetedEnemyId = obj.userData.id;
@@ -243,16 +262,12 @@ function animate3D() {
 function update3DEntities(playersData, enemiesData) {
     if (!is3DActive) return;
 
-    // --- OPRAVA: Úklid mrtvých monster ---
-    // Získáme pole IDček všech monster, která nám server právě poslal (server posílá jen živé)
+    // --- Úklid mrtvých monster ---
     const incomingEnemyIds = enemiesData.map(e => safeGet(e, 'id', 'Id'));
-    
-    // Projdeme všechny naše lokální 3D modely
     for (let id in enemies3D) {
-        // Pokud máme ve scéně monstrum, které už nám server neposílá, znamená to, že zemřelo
         if (!incomingEnemyIds.includes(id)) {
-            scene.remove(enemies3D[id]); // Smažeme model i s jmenovkou z 3D scény
-            delete enemies3D[id];        // Vymažeme ho z paměti
+            scene.remove(enemies3D[id]); 
+            delete enemies3D[id];        
         }
     }
 

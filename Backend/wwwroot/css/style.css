@@ -246,3 +246,7 @@ body {
 .card:hover::after {
     left: 150%;
 }
+#mana-bar strong {
+    display: inline-block;
+    transition: transform 0.1s ease-out;
+}
