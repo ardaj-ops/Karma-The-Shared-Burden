@@ -59,20 +59,29 @@ function updateStatsUI() {
 function renderHand() {
     const handContainer = document.getElementById("hand-container"); if (!handContainer) return; handContainer.innerHTML = ""; 
     myHand.forEach(cardId => {
-        const cData = getCardData(cardId); const cardElement = document.createElement("div"); cardElement.className = "card interactive-ui"; 
-        let color = "#ecf0f1"; if(cData.karmaShift < 0) color = "#ffcccc"; if(cData.karmaShift > 0) color = "#ccffcc"; 
+        const cData = getCardData(cardId); 
+        const cardElement = document.createElement("div"); 
+        cardElement.className = "card interactive-ui"; 
         
-        cardElement.innerHTML = `<div class="card-cost">${cData.cost}</div><strong>${cData.name}</strong>`;
-        cardElement.title = `Efekt: ${cData.description}`;
+        let bgColor = "#34495e"; // Neutrální modro-šedá
+        if(cData.karmaShift < 0) bgColor = "#c0392b"; // Temná červená
+        if(cData.karmaShift > 0) bgColor = "#27ae60"; // Světlá zelená
+        
+        cardElement.innerHTML = `
+            <div class="card-cost">${cData.cost}</div>
+            <div class="card-title">${cData.name}</div>
+            <div class="card-desc">${cData.description}</div>
+        `;
         
         cardElement.onclick = () => { playCard(cardId, cData.karmaShift, cData.damage); };
-        cardElement.style.cssText = `background: ${color}; color: #2c3e50;`;
+        
+        cardElement.style.background = `linear-gradient(135deg, ${bgColor}, #2c3e50)`;
+        cardElement.style.color = "white";
         
         handContainer.appendChild(cardElement);
     });
 }
 
-// --- PŘIDÁNO: Vykreslování relikvií ---
 function updateRelicsUI(relicsList) {
     const relicsContainer = document.getElementById("relics-list"); 
     if (!relicsContainer) return;
@@ -102,9 +111,19 @@ function showModalWithCards(title, cardIds) {
     else {
         cardIds.forEach(cardId => {
             const cData = getCardData(cardId); const cardElement = document.createElement("div");
-            let color = "#ecf0f1"; if(cData.karmaShift < 0) color = "#ffcccc"; if(cData.karmaShift > 0) color = "#ccffcc"; 
-            cardElement.innerHTML = `<strong>${cData.name}</strong><br><em>${cData.cost} Many</em><br><hr style="margin:5px 0;"><small>${cData.description}</small>`;
-            cardElement.style.cssText = `padding: 10px; width: 120px; min-height: 150px; border: 2px solid #34495e; border-radius: 8px; background: ${color}; margin: 10px; display: flex; flex-direction: column; color: #2c3e50; box-shadow: 2px 2px 10px rgba(0,0,0,0.5);`;
+            
+            let bgColor = "#34495e"; 
+            if(cData.karmaShift < 0) bgColor = "#c0392b"; 
+            if(cData.karmaShift > 0) bgColor = "#27ae60"; 
+            
+            cardElement.className = "card";
+            cardElement.innerHTML = `
+                <div class="card-cost">${cData.cost}</div>
+                <div class="card-title">${cData.name}</div>
+                <div class="card-desc">${cData.description}</div>
+            `;
+            cardElement.style.background = `linear-gradient(135deg, ${bgColor}, #2c3e50)`;
+            cardElement.style.color = "white";
             container.appendChild(cardElement);
         });
     }
@@ -124,9 +143,19 @@ function openUpgradeModal() {
     else {
         upgradableCards.forEach(cardId => {
             const cData = getCardData(cardId); const btn = document.createElement("div");
-            let color = "#ecf0f1"; if(cData.karmaShift < 0) color = "#ffcccc"; if(cData.karmaShift > 0) color = "#ccffcc"; 
-            btn.innerHTML = `<strong>${cData.name}</strong><br><em>${cData.cost} Many</em><br><hr style="margin:5px 0;"><small>${cData.description}</small>`;
-            btn.style.cssText = `padding: 10px; width: 120px; border: 2px solid #e67e22; border-radius: 8px; background: ${color}; color: #2c3e50; cursor: pointer; transition: transform 0.2s;`;
+            
+            let bgColor = "#34495e"; 
+            if(cData.karmaShift < 0) bgColor = "#c0392b"; 
+            if(cData.karmaShift > 0) bgColor = "#27ae60"; 
+            
+            btn.className = "card interactive-ui";
+            btn.innerHTML = `
+                <div class="card-cost">${cData.cost}</div>
+                <div class="card-title">${cData.name}</div>
+                <div class="card-desc">${cData.description}</div>
+            `;
+            btn.style.background = `linear-gradient(135deg, ${bgColor}, #2c3e50)`;
+            btn.style.color = "white";
             btn.onclick = () => chooseRestUpgrade(cardId);
             container.appendChild(btn);
         });
@@ -150,8 +179,15 @@ function renderShopUI(shopCards, shopRelics, removeCost) {
     shopCards.forEach(c => {
         const btn = document.createElement("div");
         let id = safeGet(c, 'id', 'Id'); let name = safeGet(c, 'name', 'Name'); let desc = safeGet(c, 'desc', 'Desc'); let price = safeGet(c, 'price', 'Price');
-        btn.innerHTML = `<strong>${name}</strong><br><small>${desc}</small><br><button style="margin-top:10px; background:#f1c40f; border:none; padding:5px; cursor:pointer; color:black;">Koupit za ${price}</button>`;
-        btn.style.cssText = "padding: 10px; border: 2px solid #f1c40f; border-radius: 5px; width: 140px; background: #2c3e50;";
+        
+        btn.className = "card interactive-ui";
+        btn.style.background = "linear-gradient(135deg, #f39c12, #d35400)"; // Zlatý obchodní gradient
+        btn.style.color = "white";
+        btn.innerHTML = `
+            <div class="card-title" style="margin-top:10px;">${name}</div>
+            <div class="card-desc" style="flex-grow:1;">${desc}</div>
+            <button style="margin-top:10px; background:#2c3e50; border:2px solid white; border-radius:5px; padding:5px 10px; cursor:pointer; color:white; font-weight:bold; width: 100%;">Koupit: ${price} 💰</button>
+        `;
         btn.querySelector("button").onclick = () => buyShopItem(id, "Card", price);
         cardsContainer.appendChild(btn);
     });
@@ -160,8 +196,8 @@ function renderShopUI(shopCards, shopRelics, removeCost) {
     shopRelics.forEach(r => {
         const btn = document.createElement("div");
         let id = safeGet(r, 'id', 'Id'); let name = safeGet(r, 'name', 'Name'); let desc = safeGet(r, 'desc', 'Desc'); let price = safeGet(r, 'price', 'Price');
-        btn.innerHTML = `<strong>🏆 ${name}</strong><br><small>${desc}</small><br><button style="margin-top:10px; background:#f1c40f; border:none; padding:5px; cursor:pointer; color:black;">Koupit za ${price}</button>`;
-        btn.style.cssText = "padding: 10px; border: 2px solid #f1c40f; border-radius: 5px; width: 180px; background: #2c3e50;";
+        btn.innerHTML = `<strong>🏆 ${name}</strong><br><small>${desc}</small><br><button style="margin-top:10px; background:#f1c40f; border:none; padding:8px; cursor:pointer; color:black; font-weight:bold; border-radius:5px;">Koupit za ${price} 💰</button>`;
+        btn.style.cssText = "padding: 15px; border: 2px solid #f1c40f; border-radius: 8px; width: 180px; background: rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: space-between;";
         btn.querySelector("button").onclick = () => buyShopItem(id, "Relic", price);
         relicsContainer.appendChild(btn);
     });
@@ -175,7 +211,9 @@ function renderShopRemoveDeck(removeCost) {
     myStartingDeck.forEach(cardId => {
         const cData = getCardData(cardId);
         const btn = document.createElement("button"); btn.innerText = cData.name;
-        btn.style.cssText = "padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer;";
+        btn.style.cssText = "padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;";
+        btn.onmouseover = () => btn.style.background = "#c0392b";
+        btn.onmouseout = () => btn.style.background = "#e74c3c";
         btn.onclick = () => removeCardFromDeck(cardId, removeCost || 50);
         removeContainer.appendChild(btn);
     });
@@ -193,7 +231,9 @@ function renderEventUI(eventData) {
     opts.forEach(opt => {
         const btn = document.createElement("button");
         btn.innerText = safeGet(opt, 'text', 'Text');
-        btn.style.cssText = "padding: 15px 30px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;";
+        btn.style.cssText = "padding: 15px 30px; font-size: 16px; background: #8e44ad; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; min-width: 250px;";
+        btn.onmouseover = () => btn.style.background = "#9b59b6";
+        btn.onmouseout = () => btn.style.background = "#8e44ad";
         btn.onclick = () => {
             optionsContainer.innerHTML = "<p>Vybráno! Čekáme na server...</p>";
             connection.invoke("ResolveEventOption", currentRoomName, playerName, eventId, safeGet(opt, 'id', 'Id')).catch(err => console.error(err));
@@ -215,11 +255,22 @@ function renderRewardScreenUI(cardChoices, relicChoice, goldReward) {
 
     const cardContainer = document.getElementById("card-reward-container"); cardContainer.innerHTML = "";
     cardChoices.forEach(card => {
-        const btn = document.createElement("button");
         let id = safeGet(card, 'id', 'Id'); let karma = safeGet(card, 'karmaShift', 'KarmaShift');
-        let color = "#ecf0f1"; if(karma < 0) color = "#ffcccc"; if(karma > 0) color = "#ccffcc"; 
-        btn.innerHTML = `<strong>${safeGet(card, 'name', 'Name')}</strong><br><em>${safeGet(card, 'cost', 'Cost')} Many</em><br><hr style="margin:5px 0;"><small>${safeGet(card, 'description', 'Description')}</small>`;
-        btn.style.cssText = `padding: 15px; width: 160px; border: 3px solid #34495e; border-radius: 8px; background: ${color}; cursor: pointer;`;
+        
+        const btn = document.createElement("div");
+        btn.className = "card interactive-ui";
+        
+        let bgColor = "#34495e"; 
+        if(karma < 0) bgColor = "#c0392b"; 
+        if(karma > 0) bgColor = "#27ae60"; 
+
+        btn.innerHTML = `
+            <div class="card-cost">${safeGet(card, 'cost', 'Cost')}</div>
+            <div class="card-title">${safeGet(card, 'name', 'Name')}</div>
+            <div class="card-desc">${safeGet(card, 'description', 'Description')}</div>
+        `;
+        btn.style.background = `linear-gradient(135deg, ${bgColor}, #2c3e50)`;
+        btn.style.color = "white";
         
         btn.onclick = () => {
             let relId = currentRelicReward ? safeGet(currentRelicReward, 'id', 'Id') : "";
