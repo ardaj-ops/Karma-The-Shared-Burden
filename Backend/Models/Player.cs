@@ -100,29 +100,27 @@ namespace RoguelikeCardGame.Models
             }
         }
 
-        // Lízne zadaný počet karet do ruky
-        public void DrawCards(int count)
+       public void DrawCards(int amount)
+{
+    Random rng = new Random();
+    for (int i = 0; i < amount; i++)
+    {
+        // Pokud došel dobírací balíček...
+        if (DrawPile.Count == 0)
         {
-            for (int i = 0; i < count; i++)
-            {
-                if (DrawPile.Count == 0)
-                {
-                    if (DiscardPile.Count > 0)
-                    {
-                        DrawPile = new List<string>(DiscardPile);
-                        DiscardPile.Clear();
-                        ShuffleDeck();
-                    }
-                    else
-                    {
-                        break; 
-                    }
-                }
+            // ...a nemáme ani nic v odhazovacím, tak prostě nemáme co lízat
+            if (DiscardPile.Count == 0) break; 
 
-                string drawnCard = DrawPile[0];
-                DrawPile.RemoveAt(0);
-                Hand.Add(drawnCard);
-            }
+            // ZÁCHRANA: Zamícháme odhozené karty zpět do balíčku!
+            DrawPile.AddRange(DiscardPile.OrderBy(x => rng.Next()));
+            DiscardPile.Clear();
         }
+
+        // Lízne vrchní kartu
+        string drawnCard = DrawPile[0];
+        DrawPile.RemoveAt(0);
+        Hand.Add(drawnCard);
+    }
+}
     }
 }

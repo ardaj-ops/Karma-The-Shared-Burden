@@ -116,18 +116,31 @@ namespace RoguelikeCardGame.Models
         {
             bool requireSync = false;
 
-            // 1. GENERACE MANY (Každou 1 sekundu)
+            // 1. GENERACE MANY A KARET (Každou 1 sekundu)
             _manaTickAccumulator += _tickRateMs;
             if (_manaTickAccumulator >= 1000) 
             {
                 _manaTickAccumulator = 0;
                 foreach(var p in Players)
                 {
+                    bool changed = false;
+                    
+                    // Přidání many
                     if (p.Mana < p.MaxMana) 
                     { 
                         p.Mana++; 
-                        requireSync = true; 
+                        changed = true; 
                     }
+                    
+                    // NOVÉ: Automatické dobírání karet v reálném čase!
+                    // Pokud máš v ruce méně než 5 karet, každou vteřinu si lízneš jednu novou
+                    if (p.Hand.Count < 5) 
+                    {
+                        p.DrawCards(1);
+                        changed = true;
+                    }
+
+                    if (changed) requireSync = true; 
                 }
             }
 

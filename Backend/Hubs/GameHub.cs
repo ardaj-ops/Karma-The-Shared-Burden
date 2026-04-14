@@ -271,10 +271,14 @@ namespace RoguelikeCardGame.Hubs
         }
 
         // Předáváme hubContext pro bezpečné odeslání z backgroundu
+        // Předáváme hubContext pro bezpečné odeslání z backgroundu
         private static async Task Broadcast3DState(GameRoom room, IHubContext<GameHub> hubContext)
         {
             var playerData = room.Players.Select(p => new { name = p.Name, x = p.X, y = p.Y, z = p.Z, hp = p.Hp, mana = p.Mana }).ToList();
-            var enemyData = room.ActiveEnemies.Where(e => e.Hp > 0).Select(e => new { id = e.Id, x = e.X, y = e.Y, z = e.Z, hp = e.Hp }).ToList();
+            
+            // OPRAVA: Přidáno 'name = e.Name', aby 3D engine nepsal "undefined"
+            var enemyData = room.ActiveEnemies.Where(e => e.Hp > 0).Select(e => new { id = e.Id, name = e.Name, x = e.X, y = e.Y, z = e.Z, hp = e.Hp }).ToList();
+            
             await hubContext.Clients.Group(room.RoomName).SendAsync("Update3DState", playerData, enemyData);
         }
 
