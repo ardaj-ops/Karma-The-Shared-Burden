@@ -1,14 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using RoguelikeCardGame.Hubs; 
+using RoguelikeCardGame.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Přidáme SignalR pro real-time komunikaci
+// Přidáme SignalR (toto automaticky registruje i IHubContext)
 builder.Services.AddSignalR();
 
-// NASTAVENÍ CORS
-// Povolíme připojení odkudkoliv (z tvého lokálu i z tvého frontendu na Renderu)
+// Nastavení CORS - Povolí tvému frontendu mluvit s backendem, i když mají jiné URL
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -16,25 +15,19 @@ builder.Services.AddCors(options =>
         policy.SetIsOriginAllowed(origin => true) 
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); 
+              .AllowCredentials(); // Nutné pro SignalR handshake
     });
 });
 
 var app = builder.Build();
 
-// Aktivujeme naše CORS pravidla
-app.UseCors();
+// POŘADÍ JE KRITICKÉ:
+app.UseCors(); // 1. Nejdříve vyřešíme povolení přístupu
 
-// --- NOVÉ (KISS PRINCIP) ---
-// 1. Nastaví index.html jako výchozí stránku, když někdo přijde na hlavní URL
-app.UseDefaultFiles(); 
+app.UseDefaultFiles(); // 2. Pak zkusíme najít index.html
+app.UseStaticFiles();  // 3. Pak povolíme odesílání souborů (js, css)
 
-// 2. Tohle přesně OPRAVUJE tu červenou chybu v konzoli! 
-// Dovoluje serveru odesílat .css, .js a .html soubory se správným MIME typem.
-app.UseStaticFiles(); 
-// ---------------------------
-
-// Nasadíme náš komunikační Hub na tuto adresu
+// 4. Nakonec namapujeme Hub
 app.MapHub<GameHub>("/gamehub");
 
 app.Run();

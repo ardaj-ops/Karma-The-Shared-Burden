@@ -2,7 +2,8 @@
 // SIGNALR PŘIPOJENÍ
 // ==========================================
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("/gamehub") 
+    // OPRAVA: Plná adresa tvého backendu na Renderu
+    .withUrl("https://karma-the-shared-burden.onrender.com/gamehub") 
     .withAutomaticReconnect()
     .build();
 
