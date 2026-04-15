@@ -467,6 +467,7 @@ namespace RoguelikeCardGame.Hubs
 
             if (minDistance > range)
             {
+                // Pohyb k hráči
                 float dirX = targetPlayer.X - enemy.X;
                 float dirZ = targetPlayer.Z - enemy.Z;
                 
@@ -482,17 +483,45 @@ namespace RoguelikeCardGame.Hubs
             }
             else
             {
+                // Útok
                 var action = enemy.CurrentAction;
                 if (action.DamageToAll > 0) 
                 {
-                    int dmg = Math.Max(0, action.DamageToAll - targetPlayer.Block);
-                    targetPlayer.Hp -= dmg;
+                    int originalDamage = action.DamageToAll;
+                    int absorbedDamage = 0;
+                    int damageToHp = 0;
+
+                    // Chytřejší výpočet rozbití štítu
+                    if (targetPlayer.Block >= originalDamage)
+                    {
+                        targetPlayer.Block -= originalDamage;
+                        absorbedDamage = originalDamage;
+                        damageToHp = 0;
+                    }
+                    else
+                    {
+                        absorbedDamage = targetPlayer.Block;
+                        damageToHp = originalDamage - targetPlayer.Block;
+                        targetPlayer.Block = 0;
+                    }
+
+                    targetPlayer.Hp -= damageToHp;
                     if (targetPlayer.Hp <= 0) targetPlayer.Hp = 0; 
                     
-                    await hubContext.Clients.Group(room.RoomName).SendAsync("SpawnHitEffect", targetPlayer.X, targetPlayer.Y, targetPlayer.Z, dmg);
+                    await hubContext.Clients.Group(room.RoomName).SendAsync("SpawnHitEffect", targetPlayer.X, targetPlayer.Y, targetPlayer.Z, damageToHp);
                     await hubContext.Clients.Group(room.RoomName).SendAsync("UpdateTeamStats", GetTeamStats(room));
                     
-                    await hubContext.Clients.Group(room.RoomName).SendAsync("CardPlayedLog", "⚠️ Systém", $"{enemy.Name} útočí na {targetPlayer.Name} za {dmg} HP!");
+                    // NÁDHERNÝ LOG BEZ SLOVA "SESLAL"
+                    string logMsg;
+                    if (damageToHp > 0 && absorbedDamage > 0)
+                        logMsg = $"⚠️ {enemy.Name} zasáhl hráče {targetPlayer.Name} za {damageToHp} HP! (Štít absorboval {absorbedDamage} DMG)";
+                    else if (damageToHp > 0 && absorbedDamage == 0)
+                        logMsg = $"🩸 {enemy.Name} drtivě zasáhl hráče {targetPlayer.Name} za {damageToHp} HP!";
+                    else
+                        logMsg = $"🛡️ {enemy.Name} zaútočil za {originalDamage} DMG, ale štít hráče {targetPlayer.Name} to plně vykryl!";
+
+                    // Pošleme to přes TurnResolved, ten vypisuje jen čistý textový seznam
+                    await hubContext.Clients.Group(room.RoomName).SendAsync("TurnResolved", new List<string> { logMsg }, 0, room.CurrentKarma, room.ActiveEnemies);
                 }
 
                 enemy.CurrentAction = EnemyDatabase.GetRandomActionForEnemy(enemy.TemplateName);
