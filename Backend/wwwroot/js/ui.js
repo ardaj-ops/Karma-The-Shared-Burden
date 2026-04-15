@@ -31,10 +31,16 @@ function toggleUI(state) {
 
     ["map-container", "reward-screen", "shop-screen", "event-screen", "rest-screen"].forEach(hideElement);
     
+    // OPRAVA: Dynamické uzamykání posunu stránky
     if (state === "battle") {
+        document.body.style.overflow = "hidden"; // Zamkne posuvník pro 3D boj
         showElement("ui-layer"); 
-    } else if (state === "map") { 
+    } else {
+        document.body.style.overflow = "auto"; // Povolí posuvník na mapě a v menu
         hideElement("ui-layer");
+    }
+
+    if (state === "map") { 
         showElement("map-container"); 
     } 
     else if (state === "shop") { showElement("shop-screen"); } 
@@ -67,7 +73,6 @@ function renderHand() {
         if(cData.karmaShift < 0) bgColor = "#c0392b"; 
         if(cData.karmaShift > 0) bgColor = "#27ae60"; 
         
-        // Přidali jsme zobrazení klávesové zkratky přímo na kartu!
         cardElement.innerHTML = `
             <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 3px; font-size: 10px; color: #f1c40f;">${index + 1}</div>
             <div class="card-cost">${cData.cost}</div>
