@@ -1,8 +1,14 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using RoguelikeCardGame.Hubs;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// =======================================================
 
 // Přidáme SignalR (toto automaticky registruje i IHubContext)
 builder.Services.AddSignalR();
