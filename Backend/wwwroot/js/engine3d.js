@@ -28,7 +28,7 @@ function createLabel(text, color) {
     ctx.fillText(text, 128, 64);
     
     const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(6, 3, 1);
     return sprite;
@@ -88,17 +88,19 @@ function generateArena() {
     arenaObjects.forEach(obj => scene.remove(obj));
     arenaObjects = [];
 
-    const bgColor = 0x1e272e;
+    // Tmavší pozadí pro lepší viditelnost ohnivých střel
+    const bgColor = 0x111820;
     scene.background = new THREE.Color(bgColor);
     scene.fog = new THREE.Fog(bgColor, 10, 70); 
 
     const floorGeo = new THREE.PlaneGeometry(100, 100);
-    const floorMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const floorMat = new THREE.MeshLambertMaterial({ color: 0x0a0a0a });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
     
-    const grid = new THREE.GridHelper(90, 90, 0x8e44ad, 0x34495e);
+    // Zářící mřížka
+    const grid = new THREE.GridHelper(90, 90, 0x8e44ad, 0x2c3e50);
     grid.position.y = 0.01; 
     scene.add(grid);
 
@@ -112,7 +114,7 @@ function generateArena() {
 
     const geoBox = new THREE.BoxGeometry(2.5, 8, 2.5);
     const geoCyl = new THREE.CylinderGeometry(1.5, 1.5, 10, 8);
-    const matObs = new THREE.MeshLambertMaterial({ color: 0x555555 }); 
+    const matObs = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
 
     const numObstacles = 15 + Math.floor(Math.random() * 10); 
     
@@ -173,7 +175,6 @@ document.addEventListener("keydown", (event) => {
 function checkCollision(nx, nz) {
     if (nx > 44 || nx < -44 || nz > 44 || nz < -44) return true; // Zdi
     
-    // 1. Kolize se sloupy a překážkami
     for (let obj of arenaObjects) {
         if (obj.userData && obj.userData.isObstacle) {
             let dx = nx - obj.position.x;
@@ -183,13 +184,12 @@ function checkCollision(nx, nz) {
         }
     }
 
-    // 2. OPRAVA: Kolize s monstry (už do nich nevlezeš)
     for (let id in enemies3D) {
         let enemy = enemies3D[id];
         let dx = nx - enemy.position.x;
         let dz = nz - enemy.position.z;
         let distance = Math.sqrt(dx * dx + dz * dz);
-        if (distance < 2.0) return true; // Poloměr krystalu je cca 1.5, takže 2.0 tě udrží bezpečně před ním
+        if (distance < 2.0) return true; 
     }
 
     return false;
@@ -323,47 +323,118 @@ function update3DEntities(playersData, enemiesData) {
     });
 }
 
+// ==========================================
+// EFEKTY ZBRANÍ A MAGIE
+// ==========================================
+
+// Pomocná funkce pro vypsání plovoucího čísla poškození
+function createFloatingDamage(x, y, z, amount) {
+    const label = createLabel(`-${amount}`, "#ff4757"); // Červené minusové číslo
+    label.position.set(x, y + 2, z);
+    scene.add(label);
+
+    let upSpeed = 0.05;
+    let opacity = 1.0;
+
+    function animateDamage() {
+        if (opacity <= 0) {
+            scene.remove(label);
+            return;
+        }
+        label.position.y += upSpeed;
+        label.material.opacity = opacity;
+        opacity -= 0.02; // Plynulé mizení
+        requestAnimationFrame(animateDamage);
+    }
+    animateDamage();
+}
+
+// Funkce pro vystřelení ohnivé koule po parabolické dráze
+function shootProjectile(startVec, endVec, colorHex, onImpact) {
+    const geom = new THREE.SphereGeometry(0.4, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+    const projectile = new THREE.Mesh(geom, mat);
+
+    // Přidáme světlo, aby koule reálně ozařovala sloupy kolem
+    const light = new THREE.PointLight(colorHex, 2, 8);
+    projectile.add(light);
+    scene.add(projectile);
+
+    const startTime = performance.now();
+    const distance = startVec.distanceTo(endVec);
+    const duration = (distance / 25.0) * 1000; // Rychlost 25 m/s
+    const peakHeight = Math.min(distance * 0.25, 4.0); // Výška oblouku
+
+    function animateProj(time) {
+        let elapsed = time - startTime;
+        let t = elapsed / duration;
+
+        if (t >= 1.0) {
+            scene.remove(projectile);
+            if (onImpact) onImpact();
+            return;
+        }
+
+        // Vypočítáme aktuální pozici pomocí Lineární interpolace (X, Z) a Paraboly (Y)
+        let currX = startVec.x + (endVec.x - startVec.x) * t;
+        let currZ = startVec.z + (endVec.z - startVec.z) * t;
+        let linearY = startVec.y + (endVec.y - startVec.y) * t;
+        let arcY = 4 * peakHeight * t * (1 - t);
+
+        projectile.position.set(currX, linearY + arcY, currZ);
+        requestAnimationFrame(animateProj);
+    }
+    requestAnimationFrame(animateProj);
+}
+
+// Hlavní funkce pro zpracování zásahů ze serveru
 function spawn3DHitEffect(x, y, z, damage) {
     if (!is3DActive) return;
 
-    // OPRAVA: Kontrola, koho přesně ten útok zasáhl
     let distanceToMe = Math.sqrt(Math.pow(x - myPosition.x, 2) + Math.pow(z - myPosition.z, 2));
 
-    // Pokud je to blíž než 1 jednotka k tvé kameře, dostal jsi zásah ty!
+    // 1. ZÁSAH HRÁČE (Od monstra)
     if (distanceToMe < 1.0) {
-        // Vytvoření dynamického zčervenání obrazovky (Vignette) pomocí CSS
         let flashOverlay = document.getElementById("damage-flash-overlay");
         if (!flashOverlay) {
             flashOverlay = document.createElement("div");
             flashOverlay.id = "damage-flash-overlay";
-            // Stín svítící z okrajů obrazovky dovnitř
             flashOverlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 50; box-shadow: inset 0 0 0px rgba(231, 76, 60, 0); transition: box-shadow 0.1s ease-out;";
             document.body.appendChild(flashOverlay);
         }
         
-        // Okamžitě okraje zčervenají
         setTimeout(() => { flashOverlay.style.boxShadow = "inset 0 0 150px rgba(231, 76, 60, 0.9)"; }, 10);
-        // A plynule vyblednou zpět do průhledna
         setTimeout(() => { flashOverlay.style.boxShadow = "inset 0 0 0px rgba(231, 76, 60, 0)"; }, 250);
-        
-        return; // Nechceme, aby se nám do obličeje kreslila žlutá koule
+        return;
     }
 
-    // Pokud útok zasáhl monstrum nebo někoho jiného, vykreslíme 3D žlutý výbuch
-    const geom = new THREE.SphereGeometry(1, 8, 8);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.8 });
-    const flash = new THREE.Mesh(geom, mat);
-    flash.position.set(x, 1.5, z);
-    scene.add(flash);
+    // 2. ZÁSAH MONSTRA (Hráč hází kouzlo)
+    // Výchozí bod je kamera hráče (trochu snížená, ať to letí z úrovně očí/rukou)
+    const startPos = new THREE.Vector3(myPosition.x, 1.2, myPosition.z);
+    const endPos = new THREE.Vector3(x, 1.5, z); // Trefujeme střed monstra
 
-    let scale = 1;
-    const fadeOut = setInterval(() => {
-        scale += 0.2;
-        flash.scale.set(scale, scale, scale);
-        flash.material.opacity -= 0.1;
-        if (flash.material.opacity <= 0) {
-            scene.remove(flash);
-            clearInterval(fadeOut);
+    shootProjectile(startPos, endPos, 0xe67e22, () => {
+        // Vizuální výbuch při dopadu (Oranžovo-žlutá exploze)
+        const geom = new THREE.SphereGeometry(1.2, 8, 8);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xf39c12, transparent: true, opacity: 0.8 });
+        const flash = new THREE.Mesh(geom, mat);
+        flash.position.copy(endPos);
+        scene.add(flash);
+
+        let scale = 1;
+        const fadeOut = setInterval(() => {
+            scale += 0.2;
+            flash.scale.set(scale, scale, scale);
+            flash.material.opacity -= 0.1;
+            if (flash.material.opacity <= 0) {
+                scene.remove(flash);
+                clearInterval(fadeOut);
+            }
+        }, 30);
+
+        // Zobrazení letícího červeného čísla poškození
+        if (damage > 0) {
+            createFloatingDamage(endPos.x, endPos.y, endPos.z, damage);
         }
-    }, 50);
+    });
 }
