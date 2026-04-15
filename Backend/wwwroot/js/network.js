@@ -2,7 +2,7 @@
 // SIGNALR PŘIPOJENÍ
 // ==========================================
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("https://karma-the-shared-burden.onrender.com/gamehub") 
+    .withUrl("/gamehub") 
     .withAutomaticReconnect()
     .build();
 
@@ -87,12 +87,24 @@ connection.on("GameStarted", (roomName, initialMap) => {
     renderMap();
 });
 
-// --- PŘIDÁNO ZPĚT: RELIKVIE ---
 connection.on("UpdateRelics", (relicsList) => { 
     updateRelicsUI(relicsList); 
 });
 
-connection.on("UpdateTeamStats", (teamData) => { currentTeamData = teamData; });
+// --- OPRAVA: NYNÍ SE ZMĚNY HP A BLOKU OKAMŽITĚ PROPÍŠOU DO LIŠTY ---
+connection.on("UpdateTeamStats", (teamData) => { 
+    currentTeamData = teamData; 
+    
+    // Najdeme data našeho hráče a aktualizujeme UI
+    let myData = teamData.find(p => safeGet(p, 'name', 'Name') === playerName);
+    if (myData) {
+        myHp = safeGet(myData, 'hp', 'Hp');
+        myMaxHp = safeGet(myData, 'maxHp', 'MaxHp');
+        myBlock = safeGet(myData, 'block', 'Block');
+        updateStatsUI();
+    }
+});
+
 connection.on("UpdateMapVotes", (votes) => { currentMapVotes = votes; renderMap(); });
 
 connection.on("ReceiveInitialState", (hand, mana, serverCards, gold, drawPile, discardPile, hp, maxHp, block, startingDeck) => {
@@ -119,9 +131,9 @@ connection.on("EnteredNode", (nodeTypeRaw, nodeData, enemiesArray) => {
     
     if (nodeType === "Encounter" || nodeType === "EliteEncounter" || nodeType === "Boss") { 
         toggleUI("battle");
-        init3DScene(); // Start 3D grafiky
+        init3DScene(); 
     } else {
-        stop3DScene(); // Zastavení 3D grafiky
+        stop3DScene(); 
         toggleUI(nodeType.toLowerCase()); 
         if(nodeType === "Shop" || nodeType === "Event" || nodeType === "RestPlace" || nodeType === "Treasure") {
             hideElement("map-container");
@@ -133,8 +145,17 @@ connection.on("EnteredNode", (nodeTypeRaw, nodeData, enemiesArray) => {
 connection.on("Update3DState", (playersData, enemiesData) => { update3DEntities(playersData, enemiesData); });
 connection.on("SpawnHitEffect", (x, y, z, damage) => { spawn3DHitEffect(x, y, z, damage); });
 
-// KARTY A BOJ
-connection.on("CardPlayedLog", (player, cardId) => { const cData = getCardData(cardId); logMessage(`🎴 ${player} seslal: ${cData.name}`); });
+// --- OPRAVA LOGOVÁNÍ KARET A SYSTÉMOVÝCH ZPRÁV ---
+connection.on("CardPlayedLog", (player, cardIdOrMessage) => { 
+    // Pokud je to systémová zpráva (např. útok monstra), nevypíšeme slovo "seslal"
+    if (player === "⚠️ Systém") {
+        logMessage(`⚠️ ${cardIdOrMessage}`);
+    } else {
+        const cData = getCardData(cardIdOrMessage); 
+        logMessage(`🎴 ${player} seslal: ${cData.name}`); 
+    }
+});
+
 connection.on("TurnResolved", (summary, totalDamage, newKarma, enemiesArray) => { summary.forEach(s => logMessage(s)); });
 
 // MÍSTNOSTI
