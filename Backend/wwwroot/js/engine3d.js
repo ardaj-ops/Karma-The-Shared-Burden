@@ -21,7 +21,6 @@ function createLabel(text, color) {
     ctx.font = 'bold 28px "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = color;
-    // Přidáme stín pro lepší čitelnost
     ctx.shadowColor = "black";
     ctx.shadowBlur = 5;
     ctx.lineWidth = 4;
@@ -29,7 +28,6 @@ function createLabel(text, color) {
     ctx.fillText(text, 128, 64);
     
     const texture = new THREE.CanvasTexture(canvas);
-    // depthTest: false zajistí, že jmenovku vždy uvidíš, i přes zeď nebo model
     const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(6, 3, 1);
@@ -50,8 +48,7 @@ function init3DScene() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
     
-    // Světla
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); // Zesíleno ambientní světlo, ať lépe vidíš
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
     directionalLight.position.set(20, 30, 10);
     scene.add(directionalLight);
@@ -62,22 +59,17 @@ function init3DScene() {
     document.addEventListener("keyup", onKeyUp);
     document.addEventListener("mousemove", onMouseMove);
 
-    // --- KLIKÁNÍ PRO ZAMKNUTÍ MYŠI A DOBÍJENÍ MANY ---
     canvas.addEventListener("mousedown", (event) => {
-        // Pokud hra ještě není uzamčena, kliknutí ji zamkne
         if(is3DActive && document.pointerLockElement !== canvas) {
             canvas.requestPointerLock();
             return;
         }
 
-        // Pokud je už zamčena a klikli jsme Levým Tlačítkem (0)
         if (is3DActive && event.button === 0 && document.pointerLockElement === canvas) {
-            // Zavoláme server, aby nám přidal manu
             if (typeof connection !== 'undefined') {
                 connection.invoke("RechargeManaClick", currentRoomName, playerName).catch(err => console.error(err));
             }
             
-            // Vizuální feedback v UI - číslo many lehce poskočí
             const manaEl = document.getElementById("mana-value");
             if (manaEl) {
                 manaEl.style.transform = "scale(1.5)";
@@ -93,16 +85,13 @@ function init3DScene() {
 }
 
 function generateArena() {
-    // 1. Úklid staré arény
     arenaObjects.forEach(obj => scene.remove(obj));
     arenaObjects = [];
 
-    // 2. Prostředí (Mlha a obloha)
     const bgColor = 0x1e272e;
     scene.background = new THREE.Color(bgColor);
     scene.fog = new THREE.Fog(bgColor, 10, 70); 
 
-    // 3. Podlaha a Mřížka
     const floorGeo = new THREE.PlaneGeometry(100, 100);
     const floorMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -113,7 +102,6 @@ function generateArena() {
     grid.position.y = 0.01; 
     scene.add(grid);
 
-    // 4. VIDITELNÉ OKRAJE ARÉNY (Svítící ohrádka na hranici +-45)
     const wallMat = new THREE.MeshBasicMaterial({ color: 0x8e44ad, wireframe: true, transparent: true, opacity: 0.3 });
     const wallGeo = new THREE.PlaneGeometry(90, 10);
     
@@ -122,10 +110,9 @@ function generateArena() {
     const wallE = new THREE.Mesh(wallGeo, wallMat); wallE.position.set(45, 5, 0); wallE.rotation.y = -Math.PI/2; scene.add(wallE); arenaObjects.push(wallE);
     const wallW = new THREE.Mesh(wallGeo, wallMat); wallW.position.set(-45, 5, 0); wallW.rotation.y = Math.PI/2; scene.add(wallW); arenaObjects.push(wallW);
 
-    // 5. Náhodné překážky uvnitř arény
     const geoBox = new THREE.BoxGeometry(2.5, 8, 2.5);
     const geoCyl = new THREE.CylinderGeometry(1.5, 1.5, 10, 8);
-    const matObs = new THREE.MeshLambertMaterial({ color: 0x555555 }); // Šedý kámen
+    const matObs = new THREE.MeshLambertMaterial({ color: 0x555555 }); 
 
     const numObstacles = 15 + Math.floor(Math.random() * 10); 
     
@@ -136,7 +123,6 @@ function generateArena() {
         let ox = (Math.random() - 0.5) * 80;
         let oz = (Math.random() - 0.5) * 80;
         
-        // Bezpečná zóna pro spawn hráčů
         if (Math.abs(ox) < 10 && Math.abs(oz) < 10) {
             ox += 12 * Math.sign(ox || 1);
             oz += 12 * Math.sign(oz || 1);
@@ -145,7 +131,7 @@ function generateArena() {
         mesh.position.set(ox, isBox ? 4 : 5, oz);
         mesh.rotation.y = Math.random() * Math.PI;
         
-        mesh.userData = { isObstacle: true }; // Značka pro kolizi
+        mesh.userData = { isObstacle: true }; 
         scene.add(mesh);
         arenaObjects.push(mesh);
     }
@@ -185,16 +171,27 @@ document.addEventListener("keydown", (event) => {
 });
 
 function checkCollision(nx, nz) {
-    if (nx > 44 || nx < -44 || nz > 44 || nz < -44) return true; // Narazil do zdi
+    if (nx > 44 || nx < -44 || nz > 44 || nz < -44) return true; // Zdi
     
+    // 1. Kolize se sloupy a překážkami
     for (let obj of arenaObjects) {
         if (obj.userData && obj.userData.isObstacle) {
             let dx = nx - obj.position.x;
             let dz = nz - obj.position.z;
             let distance = Math.sqrt(dx * dx + dz * dz);
-            if (distance < 2.5) return true; // Narazil do překážky
+            if (distance < 2.5) return true; 
         }
     }
+
+    // 2. OPRAVA: Kolize s monstry (už do nich nevlezeš)
+    for (let id in enemies3D) {
+        let enemy = enemies3D[id];
+        let dx = nx - enemy.position.x;
+        let dz = nz - enemy.position.z;
+        let distance = Math.sqrt(dx * dx + dz * dz);
+        if (distance < 2.0) return true; // Poloměr krystalu je cca 1.5, takže 2.0 tě udrží bezpečně před ním
+    }
+
     return false;
 }
 
@@ -262,7 +259,6 @@ function animate3D() {
 function update3DEntities(playersData, enemiesData) {
     if (!is3DActive) return;
 
-    // --- Úklid mrtvých monster ---
     const incomingEnemyIds = enemiesData.map(e => safeGet(e, 'id', 'Id'));
     for (let id in enemies3D) {
         if (!incomingEnemyIds.includes(id)) {
@@ -271,7 +267,6 @@ function update3DEntities(playersData, enemiesData) {
         }
     }
 
-    // VYKRESLENÍ A POHYB ŽIVÝCH NEPŘÁTEL
     enemiesData.forEach(eData => {
         let eHp = safeGet(eData, 'hp', 'Hp');
         let eId = safeGet(eData, 'id', 'Id');
@@ -298,7 +293,6 @@ function update3DEntities(playersData, enemiesData) {
         mesh.position.y = 1.75; 
     });
 
-    // VYKRESLENÍ HRÁČŮ
     playersData.forEach(pData => {
         let pName = safeGet(pData, 'name', 'Name');
         if (pName === playerName) return; 
@@ -331,6 +325,31 @@ function update3DEntities(playersData, enemiesData) {
 
 function spawn3DHitEffect(x, y, z, damage) {
     if (!is3DActive) return;
+
+    // OPRAVA: Kontrola, koho přesně ten útok zasáhl
+    let distanceToMe = Math.sqrt(Math.pow(x - myPosition.x, 2) + Math.pow(z - myPosition.z, 2));
+
+    // Pokud je to blíž než 1 jednotka k tvé kameře, dostal jsi zásah ty!
+    if (distanceToMe < 1.0) {
+        // Vytvoření dynamického zčervenání obrazovky (Vignette) pomocí CSS
+        let flashOverlay = document.getElementById("damage-flash-overlay");
+        if (!flashOverlay) {
+            flashOverlay = document.createElement("div");
+            flashOverlay.id = "damage-flash-overlay";
+            // Stín svítící z okrajů obrazovky dovnitř
+            flashOverlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 50; box-shadow: inset 0 0 0px rgba(231, 76, 60, 0); transition: box-shadow 0.1s ease-out;";
+            document.body.appendChild(flashOverlay);
+        }
+        
+        // Okamžitě okraje zčervenají
+        setTimeout(() => { flashOverlay.style.boxShadow = "inset 0 0 150px rgba(231, 76, 60, 0.9)"; }, 10);
+        // A plynule vyblednou zpět do průhledna
+        setTimeout(() => { flashOverlay.style.boxShadow = "inset 0 0 0px rgba(231, 76, 60, 0)"; }, 250);
+        
+        return; // Nechceme, aby se nám do obličeje kreslila žlutá koule
+    }
+
+    // Pokud útok zasáhl monstrum nebo někoho jiného, vykreslíme 3D žlutý výbuch
     const geom = new THREE.SphereGeometry(1, 8, 8);
     const mat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.8 });
     const flash = new THREE.Mesh(geom, mat);
